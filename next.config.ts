@@ -1,9 +1,16 @@
-import type { NextConfig } from "next";
+import { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+
   basePath: '/mini-crossword',
+
   assetPrefix: '/mini-crossword/',
+
+  images: {
+    loader: 'default',
+    path: '/mini-crossword/',
+  },
 };
 
 export default nextConfig;
