@@ -188,16 +188,16 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
     } = useMemo(() => buildCalendar(streaks), [streaks])
 
     return (
-        <div className="grid grid-cols-3 gap-5 w-full">
+        <div className="grid grid-cols-3 gap-4 w-full select-none">
             {months.map((month, idx) => {
                 const firstDate = new Date(month.year, month.month, 1)
 
                 return (
                     <div
                         key={idx}
-                        className="flex flex-col rounded-2xl bg-zinc-700 overflow-hidden"
+                        className="flex flex-col rounded-2xl bg-zinc-700 overflow-hidden hover:brightness-110 transition-all"
                     >
-                        <div className="bg-zinc-800 py-4">
+                        <div className="bg-zinc-800 py-2">
                             <h3 className="text-center text-xl font-bold text-zinc-300">
                                 {firstDate.toLocaleString("en-US", {
                                     month: "long",
@@ -235,10 +235,10 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
                                     return (
                                         <div
                                             key={`locked-${i}`}
-                                            className="relative h-12 w-12 flex flex-col items-center justify-center rounded-xl bg-zinc-800/60 text-zinc-300 border border-white/20 pointer-events-none select-none"
+                                            className="relative h-13 w-13 flex flex-col items-center justify-center rounded-xl bg-zinc-800/60 text-zinc-300 border border-white/20 pointer-events-none select-none"
                                         >
-                                            <div className="text-[10px] font-semibold mt-1 text-center opacity-60">
-                                                {label}
+                                            <div className="text-[12px] font-semibold mt-1 text-center opacity-60">
+                                                {label.replace(',', '')}
                                             </div>
 
                                             <div className="absolute text-xl">
@@ -285,7 +285,7 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
                                         key={
                                             streak.puzzleDetails.puzzleId
                                         }
-                                        className={`h-12 w-12 flex items-center justify-center text-[10px] text-center font-semibold rounded-xl cursor-pointer select-none ${bg} hover:scale-110 transition-all`}
+                                        className={`h-13 w-13 flex items-center justify-center text-[12px] text-center font-semibold rounded-xl cursor-pointer select-none ${bg} hover:scale-110 hover:brightness-110 transition-all`}
                                         onClick={() => {onTileClick(streak); router.push(`?crossword=${`${streak.puzzleDetails.puzzleId}`.split('mini-')[1]}`)}}
                                     >
                                         {label}

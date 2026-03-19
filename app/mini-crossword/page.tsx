@@ -62,6 +62,10 @@ export default function Home() {
   const [streaks, setStreaks] = useState<any[]>([]);
 
   useEffect(() => {
+    document.title = "Mini Crossword"
+  }, [])
+
+  useEffect(() => {
       fetch('/streaks.json')
           .then(response => response.json())
           .then(data => {
@@ -113,8 +117,8 @@ export default function Home() {
       <Header />
 
       <div className="flex flex-col w-full h-full gap-y-2 pb-20">
-        <Stats />
-        <ProgressBar />
+        <Stats streaks={streaks} />
+        <ProgressBar streaks={streaks} />
 
         <>
           <Suspense fallback={<div className="flex min-h-screen bg-zinc-900 font-sans py-5 px-[12%] flex-col gap-y-4"></div>}>
