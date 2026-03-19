@@ -11,12 +11,16 @@ import { Header } from "./components/Header";
 import { Calendar } from "./components/Calendar";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Suspense } from "react";
 
-export default function Home() {
-  const [isPuzzleActive, setIsPuzzleActive] = useState(true);
-  const [streaks, setStreaks] = useState<any[]>([]);
+interface HomeProps {
+  grid: any;
+  streaks: any[];
+}
 
+function HomeContent({ grid, streaks }: HomeProps) {
   const searchParams = useSearchParams();
+  const [isPuzzleActive, setIsPuzzleActive] = useState(true);
 
   useEffect(() => {
     const pressed = searchParams.get("crossword");
@@ -26,6 +30,36 @@ export default function Home() {
   const handleHomeClick = () => {
     setIsPuzzleActive(!isPuzzleActive);
   }
+
+  return (
+    <AnimatePresence mode="wait">
+      {isPuzzleActive ? (
+        <motion.div
+          key="crossword"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+        >
+          <MiniCrossword grid={grid} onHomeClick={handleHomeClick} />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="calendar"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+        >
+          <Calendar onTileClick={handleHomeClick} streaks={streaks} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+export default function Home() {
+  const [streaks, setStreaks] = useState<any[]>([]);
 
   useEffect(() => {
       fetch('/streaks.json')
@@ -82,29 +116,11 @@ export default function Home() {
         <Stats />
         <ProgressBar />
 
-        <AnimatePresence mode="wait">
-          {isPuzzleActive ? (
-            <motion.div
-              key="crossword"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              <MiniCrossword grid={grid} onHomeClick={handleHomeClick} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="calendar"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              <Calendar onTileClick={handleHomeClick} streaks={streaks} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <>
+          <Suspense fallback={<div className="flex min-h-screen bg-zinc-900 font-sans py-5 px-[12%] flex-col gap-y-4"></div>}>
+            <HomeContent grid={grid} streaks={streaks} />
+          </Suspense>
+        </>
 
       </div>
 
