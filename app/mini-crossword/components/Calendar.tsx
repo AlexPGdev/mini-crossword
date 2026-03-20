@@ -187,8 +187,12 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
         stats
     } = useMemo(() => buildCalendar(streaks), [streaks])
 
+    const handleTileClick = (streak: any) => {
+        onTileClick(streak)
+    }
+
     return (
-        <div className="grid grid-cols-3 gap-4 w-full select-none">
+        <div className="grid grid-cols-3 gap-4 w-full select-none transition-all">
             {months.map((month, idx) => {
                 const firstDate = new Date(month.year, month.month, 1)
 
@@ -286,7 +290,7 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
                                             streak.puzzleDetails.puzzleId
                                         }
                                         className={`h-13 w-13 flex items-center justify-center text-[12px] text-center font-semibold rounded-xl cursor-pointer select-none ${bg} hover:scale-110 hover:brightness-110 transition-all`}
-                                        onClick={() => {onTileClick(streak); router.push(`?crossword=${`${streak.puzzleDetails.puzzleId}`.split('mini-')[1]}`)}}
+                                        onClick={() => {handleTileClick(streak); router.push(`?crossword=${`${streak.puzzleDetails.puzzleId}`.split('mini-')[1]}`)}}
                                     >
                                         {label}
                                     </div>

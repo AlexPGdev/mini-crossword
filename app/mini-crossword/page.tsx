@@ -14,11 +14,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Suspense } from "react";
 
 interface HomeProps {
-  grid: any;
   streaks: any[];
 }
 
-function HomeContent({ grid, streaks }: HomeProps) {
+function HomeContent({ streaks }: HomeProps) {
   const searchParams = useSearchParams();
   const [isPuzzleActive, setIsPuzzleActive] = useState(true);
 
@@ -41,7 +40,7 @@ function HomeContent({ grid, streaks }: HomeProps) {
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
         >
-          <MiniCrossword grid={grid} onHomeClick={handleHomeClick} />
+          <MiniCrossword onHomeClick={handleHomeClick} />
         </motion.div>
       ) : (
         <motion.div
@@ -89,29 +88,6 @@ export default function Home() {
           });
   }, [])
 
-
-  let grid = {
-    size: 5,
-    layout: [
-      0, 1, 1, 1, 1,
-      1, 1, 1, 1, 1,
-      1, 1, 1, 1, 1,
-      1, 1, 1, 1, 0,
-      1, 1, 1, 0, 0
-    ],
-    clues: {
-      "across": ["Clue 1", "Clue 2", "Clue 3", "Clue 4", "Clue 5"], 
-      "down": ["Clue 1", "Clue 2", "Clue 3", "Clue 4", "Clue 5"]
-    },
-    solution: [
-      "", "T", "E", "S", "T",
-      "T", "I", "G", "E", "R",
-      "M", "E", "O", "W", "!",
-      "C", "L", "U", "E", "",
-      "W", "O", "O", "", ""
-    ]
-  }
-
   return (
     <div className="flex min-h-screen bg-zinc-900 font-sans py-5 px-[12%] flex-col gap-y-4">
       <Header />
@@ -122,7 +98,7 @@ export default function Home() {
 
         <>
           <Suspense fallback={<div className="flex min-h-screen bg-zinc-900 font-sans py-5 px-[12%] flex-col gap-y-4"></div>}>
-            <HomeContent grid={grid} streaks={streaks} />
+            <HomeContent streaks={streaks} />
           </Suspense>
         </>
 
