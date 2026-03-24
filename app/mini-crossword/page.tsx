@@ -89,15 +89,14 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="flex min-h-screen bg-zinc-900 font-sans py-5 flex-col gap-y-4 px-[12%]">
-      <Header />
-
+    <div className="flex min-h-screen bg-zinc-900 font-sans py-4 sm:py-5 flex-col gap-y-4 px-4 sm:px-6 md:px-10 lg:px-[12%] justify-between">
       <div className="flex flex-col w-full h-full gap-y-2 pb-20">
+        <Header />
         <Stats streaks={streaks} />
         <ProgressBar streaks={streaks} />
 
         <>
-          <Suspense fallback={<div className="flex min-h-screen bg-zinc-900 font-sans py-5 px-[12%] flex-col gap-y-4"></div>}>
+          <Suspense fallback={<div className="flex min-h-screen bg-zinc-900 font-sans py-5 flex-col gap-y-4"></div>}>
             <HomeContent streaks={streaks} />
           </Suspense>
         </>

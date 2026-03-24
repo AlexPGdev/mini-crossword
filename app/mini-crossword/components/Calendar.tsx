@@ -136,7 +136,6 @@ function buildCalendar(streaks: any[]) {
 
         expectedDay = day + 1
 
-        // 🔒 END-OF-MONTH LOCKED DAYS
         const next = streaks[index + 1]
         const nextDate = next
             ? new Date(next.puzzleDetails.publicationTime)
@@ -148,7 +147,7 @@ function buildCalendar(streaks: any[]) {
             nextDate.getFullYear() !== year
 
         if (isDifferentMonth) {
-            if (streak.puzzleDetails.publicationTime > 1706763600000) {
+            if (streak.puzzleDetails.publicationTime > Date.now()) {
                 const lastDay = new Date(year, month + 1, 0).getDate()
 
                 while (expectedDay <= lastDay) {
@@ -199,9 +198,9 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
                 return (
                     <div
                         key={idx}
-                        className="flex flex-col rounded-2xl bg-zinc-700 overflow-hidden hover:brightness-110 transition-all"
+                        className="flex flex-col rounded-2xl bg-zinc-700 hover:brightness-110 transition-all"
                     >
-                        <div className="bg-zinc-800 py-2">
+                        <div className="bg-zinc-800 rounded-tl-2xl rounded-tr-2xl py-2 shadow-inner shadow-zinc-200/30">
                             <h3 className="text-center text-xl font-bold text-zinc-300">
                                 {firstDate.toLocaleString("en-US", {
                                     month: "long",
@@ -267,14 +266,14 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
                                         ?.playState
 
                                 let bg =
-                                    "bg-zinc-600 shadow-inner shadow-white/20"
+                                    "bg-zinc-600 shadow-inner shadow-zinc-200/50"
 
                                 if (play === "completed") {
                                     bg =
-                                        "bg-green-700 shadow-inner shadow-green-300/30"
+                                        "bg-green-700 shadow-inner shadow-green-200/50"
                                 } else if (play === "inProgress") {
                                     bg =
-                                        "bg-yellow-600 shadow-inner shadow-yellow-300/30"
+                                        "bg-yellow-600 shadow-inner shadow-yellow-200/50"
                                 }
 
                                 const label =

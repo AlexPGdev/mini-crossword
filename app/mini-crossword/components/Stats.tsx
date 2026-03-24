@@ -27,7 +27,7 @@ export const Stats = memo(function Stats({ streaks }: StatsProps) {
     
 
     return (
-        <div className="flex bg-zinc-800 w-full border-1 border-zinc-600 rounded-2xl justify-between overflow-hidden select-none">
+        <div className="flex bg-zinc-800 w-full rounded-2xl justify-between overflow-hidden select-none shadow-inner shadow-zinc-200/30">
             <div className="flex flex-col w-1/4 items-center border-r-2 border-zinc-600 p-2 hover:bg-zinc-700/20 hover:brightness-120 transition-all">
                 <p className="text-sm text-zinc-300 uppercase tracking-wider">Completed</p>
                 <p className="text-2xl text-green-600 font-bold italic">{completed}</p>

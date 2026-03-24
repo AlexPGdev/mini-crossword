@@ -11,6 +11,12 @@ interface MiniCrosswordProps {
     onHomeClick: () => void;
 }
 
+function formatMmSs(totalSeconds: number) {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -22,6 +28,8 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
     const [correctLetters, setCorrectLetters] = useState<Set<string>>(new Set());
     const [incorrectLetters, setIncorrectLetters] = useState<Set<string>>(new Set());
     const [isSolved, setIsSolved] = useState<boolean>(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const isSolvedRef = useRef(false);
     const [formatedTitle, setFormatedTitle] = useState<string>("");
     const [enabled, setEnabled] = useState<boolean>(false);
     const [isPreviousEnabled, setIsPreviousEnabled] = useState<boolean>(false);
@@ -79,8 +87,23 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                 setCorrectLetters(new Set());
                 setIncorrectLetters(new Set());
                 setIsSolved(false);
+                setElapsedSeconds(0);
             });
     }, [crosswordId]);
+
+    useEffect(() => {
+        isSolvedRef.current = isSolved;
+    }, [isSolved]);
+
+    useEffect(() => {
+        if (!currentCrossword?.puzzleId || isSolved) return;
+
+        const id = window.setInterval(() => {
+            setElapsedSeconds((s) => s + 1);
+        }, 1000);
+
+        return () => window.clearInterval(id);
+    }, [currentCrossword?.puzzleId, isSolved]);
 
     useEffect(() => {
         gridRef.current = grid;
@@ -234,6 +257,8 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
 
             const key = e.key.toUpperCase();
             if (!/^[A-Z]$/.test(key)) return;
+
+            if (isSolvedRef.current) return;
 
             // Set letter
             setGrid(prev => {
@@ -631,6 +656,8 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
         return { across, down };
     }, [currentCrossword, grid]);
 
+    const timerLabel = formatMmSs(elapsedSeconds);
+
     return (
         <AnimatePresence mode="wait">
             <motion.div
@@ -640,23 +667,30 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                 exit={{ x: direction > 0 ? -100 : 100, opacity: 0 }}
                 transition={{ duration: 0.3 }}
             >
-                <div className="flex flex-col bg-zinc-800 w-full border-1 border-zinc-600 rounded-2xl justify-between px-5 py-4 gap-y-5">
-                    <div className="flex justify-between border-b-2 border-zinc-600 pb-4 items-center h-[60px]">
-                        <div className="flex items-center">
-                            <HomeIcon className="h-[20px] w-fit pr-3 border-r-2 border-zinc-600 flex items-center justify-center cursor-pointer stroke-zinc-400 hover:stroke-zinc-100 transition-all" onClick={() => { onHomeClick(); router.push('/mini-crossword')}} />
-                            <p className="font-bold pl-3 mr-5 h-[20px] w-fit pr-3 border-r-2 border-zinc-600 flex items-center justify-center">00:05</p>
-                            <button className="flex text-zinc-400 cursor-pointer hover:bg-zinc-600 rounded-sm hover:text-zinc-200 transition-all"><span className="p-2 px-4">Result</span></button>
-                            <button className="flex text-zinc-400 cursor-pointer hover:bg-zinc-600 rounded-sm hover:text-zinc-200 transition-all"><span className="p-2 px-4">Info</span></button>
+                <div className="flex flex-col bg-zinc-800 w-full max-w-full min-w-0 shadow-inner shadow-zinc-200/30 rounded-2xl justify-between px-3 py-3 sm:px-5 sm:py-4 gap-y-4 sm:gap-y-5 overflow-x-hidden" style={{ scrollbarWidth: "none" }}>
+                    <div className="flex flex-col gap-3 border-b-2 border-zinc-600 pb-3 sm:pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-2">
+                        <div className="flex flex-wrap items-center gap-y-2 gap-x-2 sm:gap-x-4">
+                            <div className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 rounded-full shadow-inner shadow-zinc-200/30 active:bg-zinc-500 transition-all shrink-0 p-2">
+                                <HomeIcon onClick={() => { onHomeClick(); router.push('/mini-crossword')}} />
+                            </div>
+                            <p className="font-bold min-h-[20px] w-fit tabular-nums tracking-tight flex items-center justify-center text-sm sm:text-base" aria-live="polite" aria-label={`Elapsed time ${timerLabel}`}>
+                                {timerLabel}
+                            </p>
+                            <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0"><span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-base">Result</span></button>
+                            <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0"><span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-base">Info</span></button>
                         </div>
                         {isSolved && (
-                            <p className="text-center"><span className="text-green-600">Congratulations!</span><br /> You solved the crossword in 00:05</p>
+                            <p className="text-center text-xs sm:text-sm order-last w-full sm:order-none sm:w-auto sm:max-w-[12rem] md:max-w-none md:flex-1 md:px-2"><span className="text-green-600">Congratulations!</span><br /> You solved the crossword in {timerLabel}</p>
                         )}
-                        <button className="flex text-zinc-400 mr-5 cursor-pointer hover:bg-zinc-600 rounded-sm hover:text-zinc-200 transition-all"><span className="p-2 px-4">Settings</span></button>
+                        <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0 sm:ml-auto"><span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-base">Settings</span></button>
                     </div>
 
-                    <div className="flex w-full gap-x-10">
-                        <div className="flex flex-col text-center gap-4">
-                            <div className="grid rounded-2xl overflow-hidden select-none border border-zinc-800" style={{ gridTemplateColumns: `repeat(${currentCrossword ? currentCrossword.size : 0}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${currentCrossword ? currentCrossword.size : 0}, minmax(0, 1fr))` }}>
+                    <div className="flex flex-col xl:flex-row w-full gap-8 xl:gap-10 xl:items-start min-w-0">
+                        <div className="flex flex-col items-stretch text-center gap-4 w-full min-w-0 xl:shrink-0 xl:w-auto xl:max-w-full">
+                            <div
+                                className="w-full max-w-[min(100%,22rem)] sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl aspect-square mx-auto xl:mx-0 rounded-2xl"
+                            >
+                            <div className="grid h-full w-full min-h-0 min-w-0 rounded-2xl overflow-hidden select-none border-1 border-zinc-800" style={{ gridTemplateColumns: `repeat(${currentCrossword ? currentCrossword.size : 0}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${currentCrossword ? currentCrossword.size : 0}, minmax(0, 1fr))` }}>
                                 {currentCrossword?.grid?.map((rowArr: string[], row: number) => {
                                     const size = currentCrossword.size;
 
@@ -668,13 +702,13 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                                         return (
                                             <div
                                                 key={index}
-                                                className={`w-20 h-20 relative
+                                                className={`min-h-20 min-w-20 relative
                                                     ${!isLastRow ? "border-b border-black" : ""} 
                                                     ${!isLastCol ? "border-r border-black" : ""} 
-                                                    flex items-center justify-center 
+                                                    flex items-center justify-center
                                                     ${
                                                         selectedTile?.row === row && selectedTile?.col === col
-                                                            ? "bg-zinc-400"
+                                                            ? "bg-zinc-400 shadow-inner"
                                                             : highlightedSet.has(`${row}-${col}`)
                                                             ? "bg-zinc-400/50"
                                                             : cell === "#"
@@ -684,12 +718,12 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                                                 onMouseDown={() => cell !== "#" && handleTileClick(row, col)}
                                             >
                                                 {clueNumbers.has(`${row}-${col}`) && (
-                                                    <div className="absolute top-0 left-0 text-md text-zinc-300 font-bold p-1">
+                                                    <div className="absolute top-0 left-0 text-[10px] sm:text-xs md:text-sm text-zinc-300 font-bold p-0.5 sm:p-1 leading-none">
                                                         {clueNumbers.get(`${row}-${col}`)}
                                                     </div>
                                                 )}
                                                 <div
-                                                    className={`letter flex h-full w-full items-center justify-center text-5xl text-shadow-md text-shadow-black/50 
+                                                    className={`letter flex h-full w-full items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-shadow-md text-shadow-black/50 
                                                         ${
                                                             correctLetters.has(`${row}-${col}`)
                                                                 ? "text-green-400"
@@ -705,33 +739,35 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                                     });
                                 })}
                             </div>
+                            </div>
                             
-                            <div className="flex justify-between items-center gap-x-2 border-b-1 border-zinc-600 pb-5">
-                                <div>
-                                    <button className="cursor-pointer border-zinc-600 bg-zinc-600/30 border-1 hover:bg-zinc-600 p-2 rounded-xl transition-all" title="Previous Crossword" onClick={() => changePuzzle(-1)}>
-                                        <MoveLeft />
+                            <div className="flex justify-between items-center gap-x-2 border-b-1 border-zinc-600 pb-4 sm:pb-5 min-w-0">
+                                <div className="shrink-0">
+                                    <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all" title="Previous Crossword" onClick={() => changePuzzle(-1)}>
+                                        <MoveLeft className="size-[18px] sm:size-6" />
                                     </button>
                                 </div>
-                                <p>{formatedTitle}</p>
-                                <div>
-                                    <button className="cursor-pointer border-zinc-600 bg-zinc-600/30 border-1 hover:bg-zinc-600 p-2 rounded-xl transition-all" title="Next Crossword" onClick={() => changePuzzle(1)}>
-                                        <MoveRight />
+                                <p className="text-sm sm:text-base px-2 min-w-0 truncate" title={formatedTitle}>{formatedTitle}</p>
+                                <div className="shrink-0">
+                                    <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all" title="Next Crossword" onClick={() => changePuzzle(1)}>
+                                        <MoveRight className="size-[18px] sm:size-6" />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-y-5 ">
-                                <div className="flex gap-x-10 items-center justify-between">
+                            <div className="flex flex-col gap-y-5 min-w-0 text-left sm:text-center xl:text-center">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:gap-x-6 sm:items-center sm:justify-between">
                                     <div>
                                         <p className="font-bold text-left">Auto-advance on solve</p>
                                         <p className="text-left text-zinc-400 text-sm">Jump to the next puzzle when you finish</p>
                                     </div>
                                     
                                     <button
+                                        type="button"
                                         onClick={() => setEnabled(!enabled)}
                                         className={`${
                                         enabled ? "bg-green-500" : "bg-zinc-400"
-                                        } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none`}
+                                        } relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none self-start sm:self-auto`}
                                     >
                                         <span
                                             className={`${
@@ -741,59 +777,69 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                                     </button>
                                 </div>
 
-                                {enabled && (
-                                    <>                        
-                                        <div className="flex transition-all">
-                                            <button 
-                                                className={`flex w-1/2 justify-center cursor-pointer border-zinc-600 ${isPreviousEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} border-1 hover:bg-zinc-600 p-2 rounded-l-xl transition-all`} 
-                                                title="Previous Crossword"
-                                                onClick={() => {setIsPreviousEnabled(!isPreviousEnabled); setIsNextEnabled(false)}}
-                                            >
-                                                <ChevronLeft /> Previous
-                                            </button>
-                                            <button 
-                                                className={`flex w-1/2 justify-center cursor-pointer border-zinc-600 ${isNextEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} border-1 hover:bg-zinc-600 p-2 rounded-r-xl transition-all`}
-                                                title="Previous Crossword"
-                                                onClick={() => {setIsNextEnabled(!isNextEnabled); setIsPreviousEnabled(false)}}
-                                            >
-                                                Next <ChevronRight />
-                                            </button>
-                                        </div>
-                                        {(isPreviousEnabled || isNextEnabled) ? (
-                                            <p className="mt-[-10px] text-sm text-zinc-400">Goes to the <span className="font-bold">{isPreviousEnabled ? "previous" : "next"}</span> crossword after solving</p>
-                                        ) : (
-                                            <p className="mt-[-10px] text-sm text-zinc-400">Choose where to go after solving</p>
-                                        )}
-                                    </>
-                                )}
+                                <AnimatePresence>
+                                    {enabled && (
+                                        <motion.div
+                                            key="enabled"
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex transition-all shadow-inner shadow-zinc-200/30 rounded-full overflow-hidden">
+                                                    <button 
+                                                        className={`flex w-1/2 justify-center cursor-pointer ${isPreviousEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} hover:bg-zinc-600 p-2 border-r-1 border-zinc-600 ${isPreviousEnabled ? "shadow-inner shadow-zinc-200/30" : ""} hover:shadow-inner hover:shadow-zinc-200/30 active:bg-zinc-500 transition-all`} 
+                                                        title="Previous Crossword"
+                                                        onClick={() => {setIsPreviousEnabled(!isPreviousEnabled); setIsNextEnabled(false)}}
+                                                    >
+                                                        <ChevronLeft /> Previous
+                                                    </button>
+                                                    <button 
+                                                        className={`flex w-1/2 justify-center cursor-pointer ${isNextEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} hover:bg-zinc-600 p-2 border-l-1 border-zinc-600 ${isNextEnabled ? "shadow-inner shadow-zinc-200/30" : ""} hover:shadow-inner hover:shadow-zinc-200/30 active:bg-zinc-500 transition-all`}
+                                                        title="Previous Crossword"
+                                                        onClick={() => {setIsNextEnabled(!isNextEnabled); setIsPreviousEnabled(false)}}
+                                                    >
+                                                        Next <ChevronRight />
+                                                    </button>
+                                                </div>
+                                                {(isPreviousEnabled || isNextEnabled) ? (
+                                                    <p className="mt-[-10px] text-sm text-zinc-400">Goes to the <span className="font-bold">{isPreviousEnabled ? "previous" : "next"}</span> crossword after solving</p>
+                                                ) : (
+                                                    <p className="mt-[-10px] text-sm text-zinc-400">Choose where to go after solving</p>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-y-5">
-                            <div className="flex gap-x-10 border-b-1 border-zinc-600 pb-5 select-none">
-                                <div className="flex flex-col">
-                                    <p className="text-sm uppercase font-bold text-zinc-300 gap">Across</p>
+                        <div className="flex flex-col gap-y-5 w-fit">
+                            <div className="flex gap-10 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-5 select-none text-left min-w-0">
+                                <div className="flex flex-col min-w-0">
+                                    <p className="text-sm uppercase font-bold text-zinc-300 gap shrink-0">Across</p>
                                     {(currentCrossword && currentCrossword.clues.across) && (
                                         currentCrossword.clues.across.map((item, index) => {
                                             const clueKey = `${item.row}-${item.col}-${item.number}`;
                                             const isComplete = completedClues.across.has(clueKey);
                                             return (
-                                                <div onClick={() => handleClueClick(item.row, item.col, "row")} key={index}>
-                                                    <p className={`text-sm text-zinc-300 p-1 px-2 transition-opacity ${item === currentClue ? 'bg-zinc-600 rounded-2xl' : ''} ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
+                                                <div onClick={() => handleClueClick(item.row, item.col, "row")} key={index} className="min-w-0">
+                                                    <p className={`text-xs sm:text-sm text-zinc-300 p-1 px-2 transition-opacity break-words hyphens-auto ${item === currentClue ? 'bg-zinc-600 rounded-2xl shadow-inner shadow-zinc-200/30' : ''} ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
                                                 </div>
                                             )
                                         })
                                     )}
                                 </div>
-                                <div className="flex flex-col">
-                                    <p className="text-sm uppercase font-bold text-zinc-300">Down</p>
+                                <div className="flex flex-col min-w-0">
+                                    <p className="text-sm uppercase font-bold text-zinc-300 shrink-0">Down</p>
                                     {(currentCrossword && currentCrossword.clues.down) && (
                                         currentCrossword.clues.down.map((item, index) => {
                                             const clueKey = `${item.row}-${item.col}-${item.number}`;
                                             const isComplete = completedClues.down.has(clueKey);
                                             return (
-                                                <div onClick={() => handleClueClick(item.row, item.col, "column")} key={index}>
-                                                    <p className={`text-sm text-zinc-300 p-1 px-2 transition-opacity ${item === currentClue ? 'bg-zinc-600 rounded-2xl' : ''} ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
+                                                <div onClick={() => handleClueClick(item.row, item.col, "column")} key={index} className="min-w-0">
+                                                    <p className={`text-xs sm:text-sm text-zinc-300 p-1 px-2 transition-opacity break-words hyphens-auto ${item === currentClue ? 'bg-zinc-600 rounded-2xl shadow-inner shadow-zinc-200/30' : ''} ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
                                                 </div>
                                             )
                                         })
@@ -802,13 +848,13 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                             </div>
                             <div className="flex flex-col gap-y-2">
                                 <p className="text-sm uppercase font-bold text-zinc-300">Multiplayer</p>
-                                <button className="flex w-fit bg-green-600/33 rounded-lg border-1 border-green-600 text-center contents-center justify-center items-center cursor-pointer hover:bg-green-600 transition-all">
-                                    <span className="px-6 py-2 text-green-400 text-sm hover:text-green-100">+ Create Room</span>
+                                <button className="flex w-fit bg-green-700 rounded-full text-center contents-center justify-center items-center shadow-inner shadow-green-200/30 hover:shadow-green-300/30 cursor-pointer hover:bg-green-600 transition-all">
+                                    <span className="px-6 py-2 text-green-200 text-sm hover:text-green-100">+ Create Room</span>
                                 </button>
-                                <div className="flex gap-x-2 items-center h-[40px]">
-                                    <input className="w-full h-full bg-zinc-800 rounded-lg border-1 border-zinc-600 text-sm text-zinc-300 p-2 focus:outline-1 focus:outline-zinc-400" placeholder="Enter code" />
-                                    <button className="flex h-full rounded-lg border-1 border-zinc-600 text-center contents-center justify-center items-center cursor-pointer hover:bg-zinc-600 transition-all">
-                                        <span className="px-6 text-zinc-300 text-sm hover:text-zinc-200">Join</span>
+                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center min-h-[40px]">
+                                    <input className="w-full min-h-[40px] bg-zinc-700/80 rounded-full text-sm text-zinc-300 p-2 px-6 focus:outline-1 focus:outline-zinc-400 min-w-0 shadow-inner shadow-zinc-200/30 hover:bg-zinc-600 hover:shadow-zinc-300/30 transition-all" placeholder="Enter code" />
+                                    <button className="flex w-fit bg-zinc-700 rounded-full text-center contents-center justify-center items-center shadow-inner shadow-zinc-200/30 hover:shadow-zinc-300/30 cursor-pointer hover:bg-zinc-600 transition-all">
+                                        <span className="px-6 py-2 text-zinc-300 text-sm hover:text-zinc-100">Join</span>
                                     </button>
                                 </div>
                             </div>
