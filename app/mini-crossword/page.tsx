@@ -89,7 +89,7 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="flex min-h-screen bg-zinc-900 font-sans py-5 px-[12%] flex-col gap-y-4">
+    <div className="flex min-h-screen bg-zinc-900 font-sans py-5 flex-col gap-y-4 px-[12%]">
       <Header />
 
       <div className="flex flex-col w-full h-full gap-y-2 pb-20">

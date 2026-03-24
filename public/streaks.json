@@ -6,6 +6,24 @@
                 "gridWidth": 5,
                 "gridHeight": 5,
                 "numWords": 10,
+                "title": "Fri, Mar 20, 2026",
+                "subtitle": "Spicy bud",
+                "author": "Sowmya Ramkumar, Ed. John Lieb",
+                "puzzleId": "bostonglobe-crossword-mini-20260320",
+                "puzzleType": "CROSSWORD",
+                "publicationTime": 1773979200000,
+                "publicationTimeZone": "America/New_York",
+                "thumbnailURL": "https://static.bostonglobe.com/games/assets/icons/IconsC_Mini.png",
+                "hideInPicker": false,
+                "locale": "en-US"
+            },
+            "series": "bostonglobe-crossword-mini"
+        },
+        {
+            "puzzleDetails": {
+                "gridWidth": 5,
+                "gridHeight": 5,
+                "numWords": 10,
                 "title": "Thu, Mar 19, 2026",
                 "subtitle": "Spicy bud",
                 "author": "Sowmya Ramkumar, Ed. John Lieb",
@@ -16,6 +34,23 @@
                 "thumbnailURL": "https://static.bostonglobe.com/games/assets/icons/IconsC_Mini.png",
                 "hideInPicker": false,
                 "locale": "en-US"
+            },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20260319",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:03:12Z",
+                "updatedAt": "2026-03-19T19:06:19Z",
+                "playProgress": {
+                    "totalBoxes": 22,
+                    "filledBoxes": 22,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 265,
+                "screenTimeSeconds": 185,
+                "playId": "a6b7d31fdc47d5b585865c6049e5ff385162b912900503d6ca6c04738b7bb6d3"
             },
             "series": "bostonglobe-crossword-mini"
         },
@@ -34,6 +69,23 @@
                 "thumbnailURL": "https://static.bostonglobe.com/games/assets/icons/IconsC_Mini.png",
                 "hideInPicker": false,
                 "locale": "en-US"
+            },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20260318",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:06:22Z",
+                "updatedAt": "2026-03-19T19:08:13Z",
+                "playProgress": {
+                    "totalBoxes": 25,
+                    "filledBoxes": 25,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 295,
+                "screenTimeSeconds": 109,
+                "playId": "eddad450f137a7d353db2d5a56bf9a54194140cb3131a9dfe205dd616f231938"
             },
             "series": "bostonglobe-crossword-mini"
         },
@@ -14858,6 +14910,23 @@
                 "hideInPicker": false,
                 "locale": "en-US"
             },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20250118",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:08:37Z",
+                "updatedAt": "2026-03-19T19:13:07Z",
+                "playProgress": {
+                    "totalBoxes": 39,
+                    "filledBoxes": 39,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 326,
+                "screenTimeSeconds": 268,
+                "playId": "0c70b588a7ffa69f9c7f815d33d71c471cdfeafb3b719047192f61fcccb92dd9"
+            },
             "series": "bostonglobe-crossword-mini"
         },
         {
@@ -14875,6 +14944,23 @@
                 "thumbnailURL": "https://static.bostonglobe.com/games/assets/icons/IconsC_Mini.png",
                 "hideInPicker": false,
                 "locale": "en-US"
+            },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20250117",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:13:11Z",
+                "updatedAt": "2026-03-19T19:14:08Z",
+                "playProgress": {
+                    "totalBoxes": 21,
+                    "filledBoxes": 21,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 310,
+                "screenTimeSeconds": 56,
+                "playId": "a412515b3ce5fe6d37f59e0427d900f26aa1a97066b7fafae9fa90e45e9138fa"
             },
             "series": "bostonglobe-crossword-mini"
         },
@@ -14894,6 +14980,23 @@
                 "hideInPicker": false,
                 "locale": "en-US"
             },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20250116",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:14:20Z",
+                "updatedAt": "2026-03-19T19:16:52Z",
+                "playProgress": {
+                    "totalBoxes": 21,
+                    "filledBoxes": 21,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 280,
+                "screenTimeSeconds": 150,
+                "playId": "323b7938b2665b210025a21965de240bc3611d9f9c69ea5538f5af9fa834cae7"
+            },
             "series": "bostonglobe-crossword-mini"
         },
         {
@@ -14911,6 +15014,23 @@
                 "thumbnailURL": "https://static.bostonglobe.com/games/assets/icons/IconsC_Mini.png",
                 "hideInPicker": false,
                 "locale": "en-US"
+            },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20250115",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:16:56Z",
+                "updatedAt": "2026-03-19T19:18:09Z",
+                "playProgress": {
+                    "totalBoxes": 21,
+                    "filledBoxes": 21,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 295,
+                "screenTimeSeconds": 72,
+                "playId": "a346f8b9dc6fe7f42d269cc893086d4fb7206c6ecaefecdb70059d9a2acd48fb"
             },
             "series": "bostonglobe-crossword-mini"
         },
@@ -14930,6 +15050,23 @@
                 "hideInPicker": false,
                 "locale": "en-US"
             },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20250114",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:18:19Z",
+                "updatedAt": "2026-03-19T19:20:07Z",
+                "playProgress": {
+                    "totalBoxes": 20,
+                    "filledBoxes": 20,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 295,
+                "screenTimeSeconds": 107,
+                "playId": "84bb9949342b9c2885de20d8bf3a435316c4ea66375cec2cbffb19ef06bf7010"
+            },
             "series": "bostonglobe-crossword-mini"
         },
         {
@@ -14947,6 +15084,23 @@
                 "thumbnailURL": "https://static.bostonglobe.com/games/assets/icons/IconsC_Mini.png",
                 "hideInPicker": false,
                 "locale": "en-US"
+            },
+            "playDetails": {
+                "userId": "a872dbea07db3767aedc90ccde4aa5f50376dddfee21941676b1e3eb41e23e02",
+                "puzzleId": "bostonglobe-crossword-mini-20250113",
+                "series": "bostonglobe-crossword-mini",
+                "puzzleType": "crossword",
+                "startedAt": "2026-03-19T19:20:13Z",
+                "updatedAt": "2026-03-19T19:22:41Z",
+                "playProgress": {
+                    "totalBoxes": 21,
+                    "filledBoxes": 21,
+                    "playState": "completed",
+                    "playStateEnum": "ALL_FILLED_CORRECT"
+                },
+                "score": 280,
+                "screenTimeSeconds": 146,
+                "playId": "e95ddc4d6715dc32362093503baebfe1eb4da1e86151fd8cc927abcf684a8ab6"
             },
             "series": "bostonglobe-crossword-mini"
         },

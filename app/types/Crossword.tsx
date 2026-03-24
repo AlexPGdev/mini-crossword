@@ -1,9 +1,21 @@
+export interface Clue {
+    number: number;
+    row: number;
+    col: number;
+    answer: string;
+    clue: string;
+}
+
 export interface Crossword {
+    puzzleId: string;
     size: number;
-    layout: number[];
+    grid: string[][];
     clues: {
-        across: string[];
-        down: string[];
+        across: { 
+            number: number; row: number; col: number; answer: string; clue: string 
+        }[];
+        down: { 
+            number: number; row: number; col: number; answer: string; clue: string 
+        }[];
     };
-    solution: string[];
 }

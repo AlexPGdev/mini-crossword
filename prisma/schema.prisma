@@ -1,0 +1,27 @@
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  progress  Progress[]
+}
+
+model Puzzle {
+  id        String   @id
+  date      DateTime
+  data      Json
+  progress  Progress[]
+}
+
+model Progress {
+  id           String   @id @default(cuid())
+  userId       String
+  puzzleId     String
+  filledGrid   Json
+  isCompleted  Boolean  @default(false)
+  timeSpent    Int?
+
+  user   User   @relation(fields: [userId], references: [id])
+  puzzle Puzzle @relation(fields: [puzzleId], references: [id])
+
+  @@unique([userId, puzzleId]) // one progress per puzzle
+}
