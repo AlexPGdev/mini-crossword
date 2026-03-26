@@ -1,11 +1,3 @@
-export interface Clue {
-    number: number;
-    row: number;
-    col: number;
-    answer: string;
-    clue: string;
-}
-
 export interface Crossword {
     puzzleId: string;
     size: number;

@@ -1,9 +1,8 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react"
+import { memo, useMemo } from "react"
 import { useRouter } from "next/navigation";
 
-let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function buildCalendar(streaks: any[]) {
@@ -182,8 +181,7 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
     const router = useRouter();
 
     const {
-        months,
-        stats
+        months
     } = useMemo(() => buildCalendar(streaks), [streaks])
 
     const handleTileClick = (streak: any) => {
@@ -192,7 +190,8 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
 
     return (
         <div className="grid grid-cols-3 gap-4 w-full select-none transition-all">
-            {months.map((month, idx) => {
+            
+            {months.flatMap((month, idx) => {
                 const firstDate = new Date(month.year, month.month, 1)
 
                 return (
@@ -228,6 +227,8 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
 
                                 if (dayObj.placeholder && dayObj.locked) {
                                     const date = new Date(dayObj.year, dayObj.month, dayObj.day)
+
+                                    if(date.getTime() < Date.now()) return null;
 
                                     const label = date.toLocaleDateString("en-US", {
                                         month: "short",

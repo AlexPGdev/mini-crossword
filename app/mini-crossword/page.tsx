@@ -1,7 +1,5 @@
 "use client";
 
-import { HomeIcon } from "lucide-react";
-import Image from "next/image";
 import { Footer } from "./components/Footer";
 import { useEffect, useState } from "react";
 import { Stats } from "./components/Stats";
@@ -12,6 +10,7 @@ import { Calendar } from "./components/Calendar";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Suspense } from "react";
+import { SettingsProvider } from "./hooks/useSettings";
 
 interface HomeProps {
   streaks: any[];
@@ -31,29 +30,31 @@ function HomeContent({ streaks }: HomeProps) {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      {isPuzzleActive ? (
-        <motion.div
-          key="crossword"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-        >
-          <MiniCrossword onHomeClick={handleHomeClick} />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="calendar"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-        >
-          <Calendar onTileClick={handleHomeClick} streaks={streaks} />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <SettingsProvider>
+      <AnimatePresence mode="wait">
+        {isPuzzleActive ? (
+          <motion.div
+            key="crossword"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+          >
+            <MiniCrossword onHomeClick={handleHomeClick} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="calendar"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+          >
+            <Calendar onTileClick={handleHomeClick} streaks={streaks} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </SettingsProvider>
   )
 }
 
