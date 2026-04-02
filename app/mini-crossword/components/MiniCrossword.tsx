@@ -91,7 +91,6 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
         if (!crosswordId || allPuzzleIds.length === 0) return;
 
         getPuzzleById(crosswordId).then((puzzle: any) => {
-            console.log(puzzle)
 
             // Find index of current puzzle in the full ID list
             const currentIndex = allPuzzleIds.findIndex(id => id === puzzle.id);
@@ -117,9 +116,6 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
             let puzzleDateRaw = `${puzzle?.id?.split("-")[2]?.slice(0, 4)}/${puzzle?.id?.split("-")[2]?.slice(4, 6)}/${puzzle?.id?.split("-")[2]?.slice(6, 8)}`;
 
-            console.log(puzzle)
-            console.log(puzzleDateRaw)
-
             let puzzleDate = new Date(puzzleDateRaw);
 
             let formattedDate = puzzleDate.toLocaleDateString("en-US", {
@@ -143,8 +139,6 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
         gridRef.current = grid;
 
         if (!currentCrossword?.puzzleId || !timerReady) return;
-
-        console.log(getCurrentTimeMs())
 
         const timeout = setTimeout(() => {
             saveProgress(
@@ -194,12 +188,6 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
         accumulatedTimeRef.current = currentCrossword.timer * 1000;
         startTimeRef.current = Date.now();
-
-        console.log(currentCrossword)
-        console.log(accumulatedTimeRef.current)
-        console.log(startTimeRef.current)
-
-        console.log(getCurrentTimeMs())
 
         setTimerReady(true);
 
@@ -568,7 +556,13 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 setShowFinishedRipple(true);
                 setTimeout(() => {
                     setShowFinishedRipple(false);
+
+                    if (enabled && (isPreviousEnabled || isNextEnabled)) {
+                        setDirection(isNextEnabled ? 1 : -1);
+                        router.push(`/mini-crossword?crossword=${isNextEnabled ? nextCrossword : previousCrossword}`, { scroll: false });
+                    }
                 }, 1000);
+
             }
 
         } else {

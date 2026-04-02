@@ -27,7 +27,6 @@ function HomeContent({ streaks }: HomeProps) {
       fetch("/api/user")
         .then(res => res.json())
         .then(user => {
-          console.log("USER:", user);
           setUserId(user.id);
         });
 

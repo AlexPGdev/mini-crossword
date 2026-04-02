@@ -24,8 +24,6 @@ export async function GET() {
     // If no user → create one
     if (!user) {
 
-        console.log("No user found, creating one...");
-
         token = generateToken();
 
         user = await prisma.user.create({
@@ -70,7 +68,6 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json(user);
 
-    console.log("Setting cookie with token:", token);
     response.cookies.set("user_token", token, {
         httpOnly: true,
         sameSite: "lax",

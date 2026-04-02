@@ -104,7 +104,6 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
             });
         }
 
-        console.log(data.timer)
         return data.timer;
 
     }
