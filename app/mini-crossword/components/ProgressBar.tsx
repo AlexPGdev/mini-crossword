@@ -1,3 +1,5 @@
+"use client"
+
 import { memo } from "react"
 
 interface ProgressBarProps {
@@ -7,8 +9,8 @@ interface ProgressBarProps {
 export const ProgressBar = memo(function ProgressBar({ streaks }: ProgressBarProps) {
 
     const total = streaks.length
-    const completed = streaks.filter((streak: any) => streak.playDetails?.playProgress?.playState === "completed").length
-    const completedToday = 100 // streaks.filter((streak: any) => streak.playDetails?.playProgress?.playState === "completed" && (new Date(streak.playDetails?.updatedAt).getDate() === new Date().getDate() && new Date(streak.playDetails?.updatedAt).getMonth() === new Date().getMonth() && new Date(streak.playDetails?.updatedAt).getFullYear() === new Date().getFullYear())).length
+    const completed = streaks.filter((streak: any) => streak.isSolved).length
+    const completedToday = streaks.filter((streak: any) => streak.playDetails?.playProgress?.playState === "completed" && (new Date(streak.playDetails?.updatedAt).getDate() === new Date().getDate() && new Date(streak.playDetails?.updatedAt).getMonth() === new Date().getMonth() && new Date(streak.playDetails?.updatedAt).getFullYear() === new Date().getFullYear())).length
 
     return (
         <div className="flex flex-col bg-zinc-800 w-full rounded-2xl justify-between px-5 py-2 select-none hover:bg-zinc-700/40 hover:brightness-120 transition-all shadow-inner shadow-zinc-200/30">

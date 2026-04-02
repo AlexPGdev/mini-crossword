@@ -12,17 +12,6 @@ function buildCalendar(streaks: any[]) {
 
     const months: any[] = []
 
-    // stats
-    let total = 0
-    let completed = 0
-    let completedToday = 0
-    let inProgress = 0
-    let fastestComplete = Infinity
-    let fastestCompleteDate = ""
-    let averageComplete = 0
-
-    const today = new Date()
-
     let currentMonthObj: any = null
 
     const appendPlaceholder = (day: number, year: number, month: number) => {
@@ -36,7 +25,7 @@ function buildCalendar(streaks: any[]) {
     }
 
     streaks.forEach((streak, index) => {
-        const date = new Date(streak.puzzleDetails.publicationTime)
+        const date = new Date(streak.date)
         const month = date.getMonth()
         const year = date.getFullYear()
         const day = date.getDate()
@@ -83,50 +72,6 @@ function buildCalendar(streaks: any[]) {
             expectedDay!++
         }
 
-        // === TILE LOGIC ===
-        total++
-
-        if (streak.playDetails?.playProgress) {
-            const playState =
-                streak.playDetails.playProgress.playState
-
-            if (playState === "completed") {
-                completed++
-
-                const completionDate = new Date(
-                    streak.playDetails.updatedAt
-                )
-
-                if (
-                    completionDate.getFullYear() ===
-                        today.getFullYear() &&
-                    completionDate.getMonth() === today.getMonth() &&
-                    completionDate.getDate() === today.getDate()
-                ) {
-                    completedToday++
-                }
-
-                if (
-                    streak.playDetails.screenTimeSeconds <
-                    fastestComplete
-                ) {
-                    fastestComplete =
-                        streak.playDetails.screenTimeSeconds
-
-                    fastestCompleteDate =
-                        streak.puzzleDetails.title
-                            .split(", ")
-                            .slice(1)
-                            .join(" ")
-                            .replace(/,/g, "")
-                }
-
-                averageComplete +=
-                    streak.playDetails.screenTimeSeconds
-            } else if (playState === "inProgress") {
-                inProgress++
-            }
-        }
 
         currentMonthObj.days.push({
             day,
@@ -137,7 +82,7 @@ function buildCalendar(streaks: any[]) {
 
         const next = streaks[index + 1]
         const nextDate = next
-            ? new Date(next.puzzleDetails.publicationTime)
+            ? new Date(next.date)
             : null
 
         const isDifferentMonth =
@@ -146,7 +91,7 @@ function buildCalendar(streaks: any[]) {
             nextDate.getFullYear() !== year
 
         if (isDifferentMonth) {
-            if (streak.puzzleDetails.publicationTime > Date.now()) {
+            if (streak.date > Date.now()) {
                 const lastDay = new Date(year, month + 1, 0).getDate()
 
                 while (expectedDay <= lastDay) {
@@ -158,17 +103,7 @@ function buildCalendar(streaks: any[]) {
     })
 
     return {
-        months,
-        stats: {
-            total,
-            completed,
-            completedToday,
-            inProgress,
-            fastestComplete:
-                fastestComplete === Infinity ? 0 : fastestComplete,
-            fastestCompleteDate,
-            averageComplete,
-        },
+        months
     }
 }
 
@@ -262,35 +197,32 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
                                 }
 
                                 const streak = dayObj.streak
-                                const play =
-                                    streak.playDetails?.playProgress
-                                        ?.playState
 
                                 let bg =
                                     "bg-zinc-600 shadow-inner shadow-zinc-200/50"
 
-                                if (play === "completed") {
+                                if (streak.isSolved) {
                                     bg =
                                         "bg-green-700 shadow-inner shadow-green-200/50"
-                                } else if (play === "inProgress") {
+                                } else if (streak.hasProgress && !streak.isSolved) {
                                     bg =
                                         "bg-yellow-600 shadow-inner shadow-yellow-200/50"
                                 }
 
                                 const label =
-                                    streak.puzzleDetails.title
-                                        .split(", ")
-                                        .slice(1)
-                                        .join(" ")
-                                        .replace(/,/g, "")
+                                    new Date(`${streak.puzzleId.slice(0, 4)}/${streak.puzzleId.slice(4, 6)}/${streak.puzzleId.slice(6, 8)}`).toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: 'short',
+                                        day: "numeric",
+                                    }).replace(',', '')
 
                                 return (
                                     <div
                                         key={
-                                            streak.puzzleDetails.puzzleId
+                                            streak.puzzleId
                                         }
                                         className={`h-13 w-13 flex items-center justify-center text-[12px] text-center font-semibold rounded-xl cursor-pointer select-none ${bg} hover:scale-110 hover:brightness-110 transition-all`}
-                                        onClick={() => {handleTileClick(streak); router.push(`?crossword=${`${streak.puzzleDetails.puzzleId}`.split('mini-')[1]}`)}}
+                                        onClick={() => {handleTileClick(streak); router.push(`?crossword=${streak.puzzleId}`)}}
                                     >
                                         {label}
                                     </div>

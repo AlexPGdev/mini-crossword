@@ -11,6 +11,7 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Suspense } from "react";
 import { SettingsProvider } from "./hooks/useSettings";
+import { usePuzzles } from "./hooks/usePuzzles";
 
 interface HomeProps {
   streaks: any[];
@@ -19,6 +20,21 @@ interface HomeProps {
 function HomeContent({ streaks }: HomeProps) {
   const searchParams = useSearchParams();
   const [isPuzzleActive, setIsPuzzleActive] = useState(true);
+  const [allPuzzleIds, setAllPuzzleIds] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+      fetch("/api/user")
+        .then(res => res.json())
+        .then(user => {
+          console.log("USER:", user);
+          setUserId(user.id);
+        });
+
+    fetch("/api/puzzles/ids")
+        .then(res => res.json())
+        .then((ids: string[]) => setAllPuzzleIds(ids));
+  }, []);
 
   useEffect(() => {
     const pressed = searchParams.get("crossword");
@@ -40,7 +56,7 @@ function HomeContent({ streaks }: HomeProps) {
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
-            <MiniCrossword onHomeClick={handleHomeClick} />
+            <MiniCrossword onHomeClick={handleHomeClick} allPuzzleIds={allPuzzleIds} userId={userId} />
           </motion.div>
         ) : (
           <motion.div
@@ -59,46 +75,37 @@ function HomeContent({ streaks }: HomeProps) {
 }
 
 export default function Home() {
-  const [streaks, setStreaks] = useState<any[]>([]);
+  // const [streaks, setStreaks] = useState<any[]>([]);
+  const { loadPuzzles, puzzles, stats } = usePuzzles();
 
+
+  const handleLogin = (token: string) => {
+    fetch("/api/user", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }).finally(() => {
+      window.location.reload();
+    });
+  }
+  
   useEffect(() => {
     document.title = "Mini Crossword"
-  }, [])
-
-  useEffect(() => {
-      fetch('/streaks.json')
-          .then(response => response.json())
-          .then(data => {
-              const sortedData = [...data.streakInfo].sort((a, b) => {
-                  const aDate = new Date(a.puzzleDetails.publicationTime);
-                  const bDate = new Date(b.puzzleDetails.publicationTime);
-
-                  if (aDate.getFullYear() !== bDate.getFullYear()) {
-                      return bDate.getFullYear() - aDate.getFullYear();
-                  }
-                  if (aDate.getMonth() !== bDate.getMonth()) {
-                      return bDate.getMonth() - aDate.getMonth();
-                  }
-                  return aDate.getDate() - bDate.getDate();
-              });
-
-              setStreaks(sortedData);
-          })
-          .catch(error => {
-              console.error('Error fetching streaks:', error);
-          });
+    loadPuzzles();
   }, [])
 
   return (
     <div className="flex min-h-screen bg-zinc-900 font-sans py-4 sm:py-5 flex-col gap-y-4 px-4 sm:px-6 md:px-10 lg:px-[12%] justify-between">
       <div className="flex flex-col w-full h-full gap-y-2 pb-20">
-        <Header />
-        <Stats streaks={streaks} />
-        <ProgressBar streaks={streaks} />
+        <Header onLogin={handleLogin} />
+        <Stats stats={stats} />
+        <ProgressBar streaks={puzzles} />
 
         <>
           <Suspense fallback={<div className="flex min-h-screen bg-zinc-900 font-sans py-5 flex-col gap-y-4"></div>}>
-            <HomeContent streaks={streaks} />
+            <HomeContent streaks={puzzles} />
           </Suspense>
         </>
 

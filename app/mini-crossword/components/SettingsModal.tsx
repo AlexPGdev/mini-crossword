@@ -1,3 +1,5 @@
+"use client"
+
 import { XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSettings } from "../hooks/useSettings";
@@ -49,7 +51,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         onClick={onClose}
                     >
                         <motion.div
-                            className="relative w-full max-w-sm rounded-2xl bg-zinc-700 p-6 shadow-xl"
+                            className="relative w-full max-w-sm rounded-2xl bg-zinc-800/80 backdrop-blur-sm p-6 shadow-inner shadow-zinc-200/30"
                             initial={{ opacity: 0, y: 20, scale: 0.5 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 20, scale: 0.5 }}

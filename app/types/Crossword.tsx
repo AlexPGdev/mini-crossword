@@ -10,4 +10,5 @@ export interface Crossword {
             number: number; row: number; col: number; answer: string; clue: string 
         }[];
     };
+    timer: number;
 }

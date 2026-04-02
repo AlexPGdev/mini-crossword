@@ -8,9 +8,12 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { SettingsModal } from "./SettingsModal";
 import { useSettings } from "../hooks/useSettings";
+import { usePuzzles } from "../hooks/usePuzzles";
 
 interface MiniCrosswordProps {
     onHomeClick: () => void;
+    allPuzzleIds: string[];
+    userId: string | null;
 }
 
 function formatMmSs(totalSeconds: number) {
@@ -19,11 +22,13 @@ function formatMmSs(totalSeconds: number) {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
+export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps) {
     const { settings } = useSettings();
     const router = useRouter();
     const searchParams = useSearchParams();
     const crosswordId = searchParams.get("crossword");
+
+    const { getPuzzleById, saveProgress } = usePuzzles();
 
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [selectedTile, setSelectedTile] = useState<{ row: number; col: number } | null>(null);
@@ -49,7 +54,8 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
         clues: {
             across: [],
             down: []
-        }
+        },
+        timer: 0
     });
 
     let [currentCrossword, setCurrentCrossword] = useState<Crossword>({
@@ -59,42 +65,73 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
         clues: {
             across: [],
             down: []
-        }
+        },
+        timer: 0
     });
 
     const [grid, setGrid] = useState<(string | null)[][]>([[]]);
     const gridRef = useRef<(string | null)[][]>([[]]);
 
+    const [solvedGrid, setSolvedGrid] = useState<(string | null)[][]>([[]]);
+    const solvedGridRef = useRef<(string | null)[][]>([[]]);
+
+    const [keyHeld, setKeyHeld] = useState<{ ctrl: Boolean, c: Boolean, backspace: Boolean }>({ ctrl: false, c: false, backspace: false });
+    const [showFinishedRipple, setShowFinishedRipple] = useState(false);
+
+    const [invalidInput, setInvalidInput] = useState({ show: false, input: "" });
+
     let [previousCrossword, setPreviousCrossword] = useState<string | null>(null);
     let [nextCrossword, setNextCrossword] = useState<string | null>(null);
 
+    const startTimeRef = useRef<number | null>(null);
+    const accumulatedTimeRef = useRef(0);
+    const [timerReady, setTimerReady] = useState(false);
+
     useEffect(() => {
-        if (!crosswordId) return;
+        if (!crosswordId || allPuzzleIds.length === 0) return;
 
-        fetch("/newPuzzles.json")
-            .then((response) => response.json())
-            .then((data) => {
-                const puzzle = data.find(
-                    (item: any) =>
-                        item.puzzleId === `bostonglobe-mini-${crosswordId}`
-                );
+        getPuzzleById(crosswordId).then((puzzle: any) => {
+            console.log(puzzle)
 
-                let currentCrosswordIndex = data.findIndex((item: any) => item.puzzleId === `bostonglobe-mini-${crosswordId}`);
-                let previousCrosswordIndex = currentCrosswordIndex + 1;
-                let nextCrosswordIndex = currentCrosswordIndex - 1;
+            // Find index of current puzzle in the full ID list
+            const currentIndex = allPuzzleIds.findIndex(id => id === puzzle.id);
 
-                setPreviousCrossword(data[previousCrosswordIndex]?.puzzleId.split('-')[2]);
-                setNextCrossword(data[nextCrosswordIndex]?.puzzleId.split('-')[2]);
+            setPreviousCrossword(allPuzzleIds[currentIndex + 1]?.split('-')[2] || null);
+            setNextCrossword(allPuzzleIds[currentIndex - 1]?.split('-')[2] || null);
 
-                setCurrentCrossword(puzzle);
-                setGrid(puzzle.grid.map((row: string[]) => row.map(cell => (cell === "#" ? "#" : null))));
-                setSelectedTile(null);
-                setCorrectLetters(new Set());
-                setIncorrectLetters(new Set());
-                setIsSolved(false);
-                setElapsedSeconds(0);
+            // Update grid and state
+            setCurrentCrossword({
+                ...puzzle,
+                puzzleId: puzzle.id
             });
-    }, [crosswordId]);
+            // puzzle.timer is in seconds; store accumulated time in milliseconds
+            accumulatedTimeRef.current = puzzle.timer * 1000;
+            startTimeRef.current = Date.now();
+            setGrid(puzzle.grid);
+            setSolvedGrid(puzzle.filledGrid);
+            setSelectedTile(null);
+            setCorrectLetters(new Set());
+            setIncorrectLetters(new Set());
+            setIsSolved(puzzle.isCompleted);
+            setElapsedSeconds(puzzle.timer);
+
+            let puzzleDateRaw = `${puzzle?.id?.split("-")[2]?.slice(0, 4)}/${puzzle?.id?.split("-")[2]?.slice(4, 6)}/${puzzle?.id?.split("-")[2]?.slice(6, 8)}`;
+
+            console.log(puzzle)
+            console.log(puzzleDateRaw)
+
+            let puzzleDate = new Date(puzzleDateRaw);
+
+            let formattedDate = puzzleDate.toLocaleDateString("en-US", {
+                weekday: "short",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+            });
+
+            setFormatedTitle(formattedDate);
+        });
+    }, [crosswordId, allPuzzleIds]);
 
     const isAnimationsEnabled = settings.animationsEnabled;
 
@@ -103,18 +140,40 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
     }, [isSolved]);
 
     useEffect(() => {
-        if (!currentCrossword?.puzzleId || isSolved) return;
+        gridRef.current = grid;
 
-        const id = window.setInterval(() => {
-            setElapsedSeconds((s) => s + 1);
+        if (!currentCrossword?.puzzleId || !timerReady) return;
+
+        console.log(getCurrentTimeMs())
+
+        const timeout = setTimeout(() => {
+            saveProgress(
+                crosswordId || "",
+                gridRef.current,
+                Math.floor(getCurrentTimeMs() / 1000)
+            );
         }, 1000);
 
-        return () => window.clearInterval(id);
-    }, [currentCrossword?.puzzleId, isSolved]);
+        return () => clearTimeout(timeout);
+    }, [grid, timerReady]);
 
     useEffect(() => {
-        gridRef.current = grid;
-    }, [grid]);
+        if (!currentCrossword?.puzzleId || isSolvedRef.current) return;
+
+        const interval = setInterval(() => {
+            saveProgress(
+                crosswordId || "",
+                gridRef.current,
+                Math.floor(getCurrentTimeMs() / 1000)
+            );
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [currentCrossword, isSolved]);
+
+    useEffect(() => {
+        solvedGridRef.current = solvedGrid;
+    }, [solvedGrid]);
 
     useEffect(() => {
         selectedTileRef.current = selectedTile;
@@ -131,25 +190,45 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
     useEffect(() => {
         currentCrosswordRef.current = currentCrossword;
 
-        if (currentCrossword && currentCrossword.puzzleId) {
-            console.log(currentCrossword.puzzleId)
-            let puzzleDateRaw = `${currentCrossword?.puzzleId?.split("-")[2]?.slice(0, 4)}/${currentCrossword?.puzzleId?.split("-")[2]?.slice(4, 6)}/${currentCrossword?.puzzleId?.split("-")[2]?.slice(6, 8)}`;
+        if (!currentCrossword?.puzzleId || isSolved) return;
 
-            let puzzleDate = new Date(puzzleDateRaw);
+        accumulatedTimeRef.current = currentCrossword.timer * 1000;
+        startTimeRef.current = Date.now();
 
-            let formattedDate = puzzleDate.toLocaleDateString("en-US", {
-                weekday: "short",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-            });
+        console.log(currentCrossword)
+        console.log(accumulatedTimeRef.current)
+        console.log(startTimeRef.current)
 
-            setFormatedTitle(formattedDate);
-        }
+        console.log(getCurrentTimeMs())
 
+        setTimerReady(true);
+
+        const interval = setInterval(() => {
+            if (!startTimeRef.current || isSolvedRef.current) return;
+
+            const current = accumulatedTimeRef.current + (Date.now() - startTimeRef.current);
+            setElapsedSeconds(Math.floor(current / 1000));
+        }, 1000);
+
+        return () => clearInterval(interval);
     }, [currentCrossword]);
 
     useEffect(() => {
+        const handleUnload = () => {
+            navigator.sendBeacon("/api/progress", JSON.stringify({
+                puzzleId: crosswordId,
+                filledGrid: gridRef.current,
+                timeSpent: Math.floor(getCurrentTimeMs() / 1000)
+            }));
+        };
+
+        window.addEventListener("beforeunload", handleUnload);
+
+        return () => window.removeEventListener("beforeunload", handleUnload);
+    }, []);
+
+    useEffect(() => {
+
         function keyOf(pos: { row: number; col: number }) {
             return `${pos.row}-${pos.col}`;
         }
@@ -162,15 +241,23 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
 
             const { row, col } = selected;
 
+            if(e.key === "Control"){
+                setKeyHeld(prev => ({ ...prev, ctrl: true }));
+            }
+            else if(e.ctrlKey && e.key.toLowerCase() === "c"){
+                setKeyHeld(prev => ({ ...prev, c: true }));
+            }
+            else if(e.ctrlKey && e.key === "Backspace"){
+                setKeyHeld(prev => ({ ...prev, backspace: true }));
+            }
+
+
             if (e.key === 'Backspace') {
                 if (isSolvedRef.current) return;
 
                 if (e.ctrlKey) {
-                    console.log('ctrl+backspace')
-                    console.log(incorrectLetters)
                     removeIncorrectLetters();
                 } else {
-                    console.log('backspace')
                     setGrid(prev => {
                         const newGrid = prev.map(r => [...r]);
                         newGrid[row] && (newGrid[row][col] = null);
@@ -205,6 +292,78 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                 const nextMode = mode === 'row' ? 'column' : 'row';
                 setHighlightMode(nextMode);
                 setHighlightedTiles(getHighlightedTiles(selected, nextMode));
+                return;
+            }
+
+            // When pressing tab it should move selection to the next clue, prioritizing across clues first, then down clues
+            if (e.key === 'Tab') {
+                e.preventDefault();
+
+                const selected = selectedTileRef.current;
+                if (!selected) return;
+
+                const crossword = currentCrosswordRef.current;
+                if (!crossword?.grid) return;
+
+                const { row: startRow, col: startCol } = selected;
+                const mode = highlightModeRef.current;
+
+                // Determine current clue
+                let currentClue: any = null;
+                if (mode === 'row') {
+                    const acrossClues = crossword.clues.across.filter(c => c.row === startRow && c.col <= startCol);
+                    const sorted = acrossClues.sort((a, b) => b.col - a.col);
+                    if (sorted.length > 0) {
+                        currentClue = { ...sorted[0], type: 'across' };
+                    }
+                } else {
+                    const downClues = crossword.clues.down.filter(c => c.col === startCol && c.row <= startRow);
+                    const sorted = downClues.sort((a, b) => b.row - a.row);
+                    if (sorted.length > 0) {
+                        currentClue = { ...sorted[0], type: 'down' };
+                    }
+                }
+
+                // Get all clues sorted across then down
+                const allClues = [
+                    ...crossword.clues.across.sort((a, b) => a.number - b.number).map(c => ({ ...c, type: 'across' })),
+                    ...crossword.clues.down.sort((a, b) => a.number - b.number).map(c => ({ ...c, type: 'down' })),
+                ];
+
+                const currentClueIndex = currentClue ? allClues.findIndex(c => c.number === currentClue.number && c.type === currentClue.type) : -1;
+
+                // Helper function to find first empty cell in a clue
+                const getFirstEmptyInClue = (clue: any) => {
+                    const size = crossword.size;
+                    if (clue.type === 'across') {
+                        for (let c = clue.col; c < size && crossword.grid[clue.row]?.[c] !== '#'; c++) {
+                            if (gridRef.current[clue.row]?.[c] === null) {
+                                return { row: clue.row, col: c };
+                            }
+                        }
+                    } else {
+                        for (let r = clue.row; r < size && crossword.grid[r]?.[clue.col] !== '#'; r++) {
+                            if (gridRef.current[r]?.[clue.col] === null) {
+                                return { row: r, col: clue.col };
+                            }
+                        }
+                    }
+                    return null;
+                };
+
+                // Cycle through clues starting from next one to find first with empty cell
+                for (let i = 1; i <= allClues.length; i++) {
+                    const idx = (currentClueIndex + i) % allClues.length;
+                    const nextClue = allClues[idx];
+                    const nextPos = getFirstEmptyInClue(nextClue);
+                    if (nextPos) {
+                        setSelectedTile(nextPos);
+                        setHighlightMode(nextClue?.type === 'across' ? 'row' : 'column');
+                        setHighlightedTiles(getHighlightedTiles(nextPos, nextClue?.type === 'across' ? 'row' : 'column'));
+                        return;
+                    }
+                }
+
                 return;
             }
 
@@ -277,114 +436,145 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
             }
 
             const key = e.key.toUpperCase();
-            if (!/^[A-Z]$/.test(key)) return;
+            if (!/^[A-Z]$/.test(key)){
+
+                if(e.key === "Control" || e.key === "Backspace" || e.key === " " || e.key === "Tab" || e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Shift") return;
+
+                setInvalidInput({ show: true, input: e.key });
+
+                setTimeout(() => {
+                    setInvalidInput({ show: false, input: "" });
+                }, 1500);
+                return;
+            }
 
             if (isSolvedRef.current) return;
 
-            console.log("key", key)
+            if(!e.ctrlKey) {
+                setGrid(prev => {
+                    const newGrid = prev.map(r => [...r]);
+                    newGrid[row] && (newGrid[row][col] = key);
+                    return newGrid;
+                });
+    
+                setCorrectLetters(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(keyOf(selected));
+                    return newSet;
+                });
+    
+                setIncorrectLetters(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(keyOf(selected));
+                    return newSet;
+                });
+    
+                const nextSelection = moveSelectionNextAuto(selected, mode);
+                if (nextSelection) {
+                    setSelectedTile(nextSelection.position);
+                    setHighlightMode(nextSelection.mode);
+                    setHighlightedTiles(getHighlightedTiles(nextSelection.position, nextSelection.mode));
+                }
+            }
 
-            setGrid(prev => {
-                const newGrid = prev.map(r => [...r]);
-                newGrid[row] && (newGrid[row][col] = key);
-                return newGrid;
-            });
+        }
 
-            setCorrectLetters(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(keyOf(selected));
-                return newSet;
-            });
+        function handleKeyUp(e: KeyboardEvent) {
+            if(e.key === "Control"){
+                setKeyHeld(prev => ({ ...prev, ctrl: false }));
+                setKeyHeld(prev => ({ ...prev, c: false }));
+                setKeyHeld(prev => ({ ...prev, backspace: false }));
+            }
+            else if(e.key.toLowerCase() === "c"){
+                setKeyHeld(prev => ({ ...prev, c: false }));
+            }
+            else if(e.key === "Backspace"){
+                setKeyHeld(prev => ({ ...prev, backspace: false }));
+            }
+        }
 
-            setIncorrectLetters(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(keyOf(selected));
-                return newSet;
-            });
+        window.addEventListener('keydown', handleKeyPress);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyPress);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
 
-            const nextSelection = moveSelectionNextAuto(selected, mode);
+    useEffect(() => {
+        if (isGridFull(grid)) {
+            checkGrid(true);
+        }
+        
+        if(!selectedTile) {
+            const nextSelection = moveSelectionNextAuto({row: 0, col: 0}, "row");
             if (nextSelection) {
                 setSelectedTile(nextSelection.position);
                 setHighlightMode(nextSelection.mode);
                 setHighlightedTiles(getHighlightedTiles(nextSelection.position, nextSelection.mode));
             }
         }
-
-        window.addEventListener('keydown', handleKeyPress);
-        return () => {
-            window.removeEventListener('keydown', handleKeyPress);
-        };
-    }, []);
-
-    useEffect(() => {
-        console.log('asd')
-
-        const flatGrid = gridRef.current.flat();
-        const filledTiles = flatGrid.filter(item => item !== null);
-
-        const solvedTiles = currentCrosswordRef.current.grid?.flat() ?? [];
-
-        console.log(filledTiles)
-        console.log(solvedTiles)
-
-        if (solvedTiles.length > 0 && areArraysEqual(filledTiles, solvedTiles)) {
-            console.log('finished')
-
-            checkGrid();
-            setIsSolved(true);
-
-            if (enabled && (isPreviousEnabled || isNextEnabled)) {
-                setDirection(isNextEnabled ? 1 : -1);
-                router.push(`/mini-crossword?crossword=${isNextEnabled ? nextCrossword : previousCrossword}`, { scroll: false });
-            }
-        }
-
     }, [grid]);
 
-    const areArraysEqual = (arrA: any[], arrB: any[]) => {
-        const isLengthEqual = arrA.length === arrB.length
-        if (!isLengthEqual) { return false; }
+    function getCurrentTimeMs() {
+        if (!startTimeRef.current) return accumulatedTimeRef.current;
 
-        let isEqual = true;
-        for (let i = 0; i < arrA.length; i++) {
-            if (arrA[i] !== arrB[i]) {
-                return false;
-            }
-        }
-        return isEqual;
+        return accumulatedTimeRef.current + (Date.now() - startTimeRef.current);
     }
 
-    function checkGrid() {
-        const userGrid = gridRef.current;
-        const puzzle = currentCrosswordRef.current;
+    function isGridFull(grid: (string | null)[][]) {
+        return grid.every(row =>
+            row.every(cell => cell === "#" || cell !== null)
+        );
+    }
 
-        if (!userGrid || !puzzle?.grid) return;
+    async function checkGrid(checkSolved: boolean = false) {
+        const userGrid = gridRef.current;
+
+        if (!userGrid || userGrid?.length === 1 || crosswordId === null) return;
+
+        const solution = solvedGridRef.current;
 
         const newCorrect = new Set<string>();
         const newIncorrect = new Set<string>();
 
         const keyOf = (r: number, c: number) => `${r}-${c}`;
 
-        for (let r = 0; r < puzzle.size; r++) {
-            for (let c = 0; c < puzzle.size; c++) {
-                const solutionCell = puzzle.grid[r]?.[c];
-                const userCell = userGrid[r]?.[c];
-
-                if (solutionCell === "#") continue;
-
+        userGrid.forEach((row, r) => {
+            row.forEach((cell, c) => {
                 const key = keyOf(r, c);
 
-                if (userCell === solutionCell) {
+                if (cell === solution?.[r]?.[c]) {
                     newCorrect.add(key);
-                } else if (userCell !== null && userCell !== undefined) {
+                } else if (cell !== null) {
                     newIncorrect.add(key);
                 }
+            });
+        });
+
+        if(checkSolved) {
+            if (newIncorrect.size === 0) {
+                saveProgress(
+                    crosswordId || "",
+                    userGrid,
+                    Math.floor(getCurrentTimeMs() / 1000)
+                ).then((time) => {
+                    accumulatedTimeRef.current = time * 1000;
+                    startTimeRef.current = Date.now();
+                    setElapsedSeconds(time);
+                });
+                setIsSolved(true);
+                setCorrectLetters(newCorrect);
+                setShowFinishedRipple(true);
+                setTimeout(() => {
+                    setShowFinishedRipple(false);
+                }, 1000);
             }
+
+        } else {
+            setCorrectLetters(newCorrect);
+            setIncorrectLetters(newIncorrect);
         }
-
-        setCorrectLetters(newCorrect);
-        setIncorrectLetters(newIncorrect);
-
-        console.log(newCorrect, newIncorrect)
     }
 
     function removeIncorrectLetters() {
@@ -417,6 +607,14 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
         setGrid(nextGrid);
     }
 
+    /**
+     * Automatically determines the next selection position after entering a letter.
+     * Prioritizes moving to the next empty cell within the current clue (across or down),
+     * then cycles through all clues to find the first empty cell in the next clue.
+     * @param current - The current position {row, col}
+     * @param mode - The current highlight mode ("row" for across, "column" for down)
+     * @returns The next position and mode, or null if no empty cells found
+     */
     function moveSelectionNextAuto(
         current: { row: number; col: number },
         mode: "row" | "column"
@@ -427,23 +625,27 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
         const size = crossword.size;
         const { row: startRow, col: startCol } = current;
 
+        // Determine the current clue based on mode and position
         let currentClue: ({ number: number; row: number; col: number; answer: string; clue: string } & { type: 'across' | 'down' }) | null = null;
 
         if (mode === 'row') {
+            // Find across clues on the same row, starting at or before current column
             const acrossClues = crossword.clues.across.filter(c => c.row === startRow && c.col <= startCol);
-            const sorted = acrossClues.sort((a, b) => b.col - a.col);
+            const sorted = acrossClues.sort((a, b) => b.col - a.col); // Sort by column descending to get the rightmost starting clue
             if (sorted.length > 0) {
                 currentClue = { ...sorted[0], type: 'across' } as any;
             }
         } else {
+            // Find down clues on the same column, starting at or before current row
             const downClues = crossword.clues.down.filter(c => c.col === startCol && c.row <= startRow);
-            const sorted = downClues.sort((a, b) => b.row - a.row);
+            const sorted = downClues.sort((a, b) => b.row - a.row); // Sort by row descending to get the bottommost starting clue
             if (sorted.length > 0) {
                 currentClue = { ...sorted[0], type: 'down' } as any;
             }
         }
 
         if (currentClue) {
+            // Get all cells in the current clue
             const clueCells: { row: number; col: number }[] = [];
             if (currentClue.type === 'across') {
                 for (let c = currentClue.col; c < size && crossword.grid[currentClue.row]?.[c] !== '#'; c++) {
@@ -455,30 +657,49 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                 }
             }
 
+            // Find current position in the clue cells
             const currentIndex = clueCells.findIndex(pos => pos.row === startRow && pos.col === startCol);
+            const isClueFull = clueCells.every(pos => gridRef.current[pos.row]?.[pos.col] !== null);
+
             if (currentIndex >= 0) {
-                for (let i = currentIndex + 1; i < clueCells.length; i++) {
-                    const pos = clueCells[i];
-                    if (pos && gridRef.current[pos.row]?.[pos.col] === null) {
+                if (isClueFull) {
+                    // If clue is fully filled, advance sequentially but don't wrap around
+                    const nextIndex = currentIndex + 1;
+                    if (nextIndex < clueCells.length) {
+                        const nextPos = clueCells[nextIndex];
                         return {
-                            position: pos,
+                            position: nextPos as { row: number; col: number },
                             mode: currentClue.type === 'across' ? 'row' : 'column',
                         };
                     }
-                }
+                    // If at end of clue, fall through to search other clues for empty tiles
+                } else {
+                    // First, try to find next empty cell after current position
+                    for (let i = currentIndex + 1; i < clueCells.length; i++) {
+                        const pos = clueCells[i];
+                        if (pos && gridRef.current[pos.row]?.[pos.col] === null) {
+                            return {
+                                position: pos,
+                                mode: currentClue.type === 'across' ? 'row' : 'column',
+                            };
+                        }
+                    }
 
-                for (let i = 0; i < currentIndex; i++) {
-                    const pos = clueCells[i];
-                    if (pos && gridRef.current[pos.row]?.[pos.col] === null) {
-                        return {
-                            position: pos,
-                            mode: currentClue.type === 'across' ? 'row' : 'column',
-                        };
+                    // If no empty cells after, wrap around to beginning of clue
+                    for (let i = 0; i < currentIndex; i++) {
+                        const pos = clueCells[i];
+                        if (pos && gridRef.current[pos.row]?.[pos.col] === null) {
+                            return {
+                                position: pos,
+                                mode: currentClue.type === 'across' ? 'row' : 'column',
+                            };
+                        }
                     }
                 }
             }
         }
 
+        // If no empty cells in current clue, search all clues in order
         const allClues: (Crossword['clues']['across'][number] & { type: 'across' | 'down' })[] = [
             ...[...crossword.clues.across]
                 .sort((a, b) => a.number - b.number)
@@ -492,6 +713,7 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
             return null;
         }
 
+        // Helper function to find first empty cell in a clue
         const getFirstEmptyInClue = (clue: Crossword['clues']['across'][number] & { type: 'across' | 'down' }) => {
             if (clue.type === 'across') {
                 for (let c = clue.col; c < size && crossword.grid[clue.row]?.[c] !== '#'; c++) {
@@ -509,10 +731,12 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
             return null;
         };
 
+        // Find index of current clue in the sorted list
         const currentClueIndex = currentClue
             ? allClues.findIndex(c => c.number === currentClue!.number && c.type === currentClue!.type)
             : -1;
 
+        // Cycle through all clues starting from the next one
         for (let i = 1; i <= allClues.length; i++) {
             const idx = (currentClueIndex + i + allClues.length) % allClues.length;
             const nextClue = allClues[idx];
@@ -782,11 +1006,9 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                             <div className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 rounded-full shadow-inner shadow-zinc-200/30 active:bg-zinc-500 transition-all shrink-0 p-2">
                                 <HomeIcon onClick={() => { onHomeClick(); router.push('/mini-crossword') }} />
                             </div>
-                            <p className="font-bold min-h-[20px] w-fit tabular-nums tracking-tight flex items-center justify-center text-sm sm:text-base" aria-live="polite" aria-label={`Elapsed time ${timerLabel}`}>
+                            <p className="min-h-[20px] text-zinc-300 w-fit tabular-nums tracking-tight flex items-center justify-center text-xl" aria-live="polite" aria-label={`Elapsed time ${timerLabel}`}>
                                 {timerLabel}
                             </p>
-                            <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0"><span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-base">Result</span></button>
-                            <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0"><span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-base">Info</span></button>
                         </div>
                         {isSolved && (
                             <p className="text-center text-xs sm:text-sm order-last w-full sm:order-none sm:w-auto sm:max-w-[12rem] md:max-w-none md:flex-1 md:px-2"><span className="text-green-600">Congratulations!</span><br /> You solved the crossword in {timerLabel}</p>
@@ -800,29 +1022,6 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                                 className="w-full max-w-[min(100%,22rem)] sm:max-w-sm md:max-w-md overflow-hidden lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl aspect-square mx-auto xl:mx-0 rounded-2xl"
                             >
                                 <div className="relative h-full w-full">
-                                    {highlightedTiles.length > 0 && (
-                                        isAnimationsEnabled && (
-                                                <motion.div
-                                                    layout
-                                                    className="absolute bg-zinc-400/40 rounded-md z-11 pointer-events-none"
-                                                    style={{
-                                                        top: `${(highlightedTiles[0] ? highlightedTiles[0].row : 0) / currentCrossword.size * 100}%`,
-                                                        left: `${(highlightedTiles[0] ? highlightedTiles[0].col : 0) / currentCrossword.size * 100}%`,
-                                                        width:
-                                                            highlightMode === "row"
-                                                                ? `${(highlightedTiles.length / currentCrossword.size) * 100}%`
-                                                                : `${(1 / currentCrossword.size) * 98}%`,
-                                                        height:
-                                                            highlightMode === "column"
-                                                                ? `${(highlightedTiles.length / currentCrossword.size) * 100}%`
-                                                                : `${(1 / currentCrossword.size) * 98}%`,
-                                                    }}
-                                                    transition={{ duration: isAnimationsEnabled ? 0.3 : 0, type: "spring", stiffness: 500, damping: 30 }}
-                                                />
-                                        )
-                                    )}
-
-                                    {/* Actual grid */}
                                     <div
                                         className="grid h-full w-full rounded-2xl overflow-hidden select-none border-1 border-zinc-800 relative z-10"
                                         style={{
@@ -856,38 +1055,118 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                                                         }`}
                                                         onMouseDown={() => cell !== "#" && handleTileClick(row, col)}
                                                     >
-                                                        {/* Animated selected tile */}
-                                                        {(isAnimationsEnabled && selectedTile?.row === row && selectedTile?.col === col) && (
-                                                            <motion.div
-                                                                layoutId="selectedTile"
-                                                                className="absolute inset-0 bg-zinc-400 rounded-sm z-9"
-                                                                transition={{ duration: 0.3, type: "spring", stiffness: 500, damping: 30 }}
-                                                            />
+
+                                                        {isAnimationsEnabled && (
+                                                            <>                                                            
+                                                                <AnimatePresence>
+                                                                    {highlightedSet.has(`${row}-${col}`) && (
+                                                                        <motion.div
+                                                                            layout
+                                                                            className="absolute inset-0 z-0 bg-zinc-400/40"
+                                                                            initial={{ opacity: 0, scale: 0.95 }}
+                                                                            animate={{ opacity: 1, scale: 1 }}
+                                                                            exit={{ opacity: 0, scale: 0.95 }}
+                                                                            transition={{ duration: 0.25 }}
+                                                                        />
+                                                                    )}
+                                                                </AnimatePresence>
+
+                                                                {(selectedTile?.row === row && selectedTile?.col === col) && (
+                                                                    <motion.div
+                                                                        layoutId="selectedTile"
+                                                                        className="absolute inset-0 bg-zinc-400 rounded-sm z-9"
+                                                                        transition={{ duration: 0.3, type: "spring", stiffness: 500, damping: 30 }}
+                                                                    />
+                                                                )}
+                                                            </>
                                                         )}
+
+                                                        {/* Animated selected tile */}
 
                                                         {/* Clue number */}
                                                         {clueNumbers.has(`${row}-${col}`) && (
-                                                            <div className="absolute top-0 left-0 text-[10px] sm:text-xs md:text-sm text-zinc-300 font-bold p-0.5 sm:p-1 leading-none z-10">
+                                                            <div className="absolute top-0 left-0 text-md text-white sm:p-2 leading-none z-10">
                                                                 {clueNumbers.get(`${row}-${col}`)}
                                                             </div>
                                                         )}
 
                                                         {/* Letter */}
-                                                        <div
-                                                            className={`relative z-10 flex ${settings.cursiveFont && "font-[cursive]"} h-full w-full items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-shadow-md text-shadow-black/50 
-                                                        ${correctLetters.has(`${row}-${col}`)
-                                                                    ? "text-green-400"
-                                                                    : incorrectLetters.has(`${row}-${col}`)
-                                                                        ? "text-red-400"
-                                                                        : "text-white"
-                                                                }`}
-                                                        >
-                                                            {cell !== "#" ? grid[row]?.[col] : ""}
-                                                        </div>
+                                                        {isAnimationsEnabled ? (
+                                                            <AnimatePresence>
+                                                                {(cell !== "#" && (/^[A-Z]$/.test( grid?.[row]?.[col] ?? "" ))) && (
+                                                                    <motion.div
+                                                                        layoutId={`letter-${row}-${col}`}
+                                                                        className={`relative z-10 flex ${settings.cursiveFont && "font-[cursive]"} h-full w-full items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-shadow-md text-shadow-black/50 
+                                                                                ${correctLetters.has(`${row}-${col}`)
+                                                                                    ? "text-green-400"
+                                                                                    : incorrectLetters.has(`${row}-${col}`)
+                                                                                        ? "text-red-400"
+                                                                                        : "text-white"
+                                                                                }`
+                                                                            }
+                                                                        initial={{ scale: 0.1, opacity: 0 }}
+                                                                        animate={{ scale: 1, opacity: 1 }}
+                                                                        exit={{ scale: 0.1, opacity: 0 }}
+                                                                        transition={{ duration: isAnimationsEnabled ? 0.2 : 0 }}
+                                                                    >
+
+                                                                        {cell !== "#" ? grid[row]?.[col] : ""}
+                                                                    </motion.div>
+                                                                )}
+                                                            </AnimatePresence>
+                                                        ) : (
+                                                            <div
+                                                                className={`relative z-10 flex ${settings.cursiveFont && "font-[cursive]"} h-full w-full items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-shadow-md text-shadow-black/50 
+                                                                    ${correctLetters.has(`${row}-${col}`)
+                                                                        ? "text-green-400"
+                                                                        : incorrectLetters.has(`${row}-${col}`)
+                                                                            ? "text-red-400"
+                                                                            : "text-white"
+                                                                    }`
+                                                                }
+                                                            >
+                                                                {cell !== "#" ? grid[row]?.[col] : ""}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             });
                                         })}
+
+                                        <AnimatePresence>
+                                            {(showFinishedRipple) && selectedTile && (
+                                                <motion.div
+                                                    key="ripple"
+                                                    className="absolute bg-green-300/30 rounded-full pointer-events-none"
+                                                    style={{
+                                                        top: `${(selectedTile.row * 100) / (currentCrossword?.size || 1)}%`,
+                                                        left: `${(selectedTile.col * 100) / (currentCrossword?.size || 1)}%`,
+                                                        width: `${100 / (currentCrossword?.size || 1)}%`,
+                                                        height: `${100 / (currentCrossword?.size || 1)}%`,
+                                                    }}
+                                                    initial={{ scale: 0, opacity: 1 }}
+                                                    animate={{ scale: 20, opacity: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    transition={{ duration: 1, ease: "easeOut" }}
+                                                />
+                                            )}
+
+                                            {invalidInput.show && (
+                                                <motion.div
+                                                    key={`invalid-${invalidInput.input}`}
+                                                    className="z-99 absolute bottom-0 left-0 right-0 p-2 pointer-events-none bg-red-800 rounded-2xl w-fit ml-auto mr-auto mb-4"
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 20 }}
+                                                    transition={{ duration: 0.3 }}
+                                                >
+                                                    <p className="text-sm text-zinc-300 text-center">Invaild Input:
+                                                        <kbd className={`ml-2 border border-zinc-600 bg-zinc-800 text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>{invalidInput.input}</kbd>
+                                                    </p>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
                                     </div>
                                 </div>
                             </div>
@@ -967,28 +1246,50 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                         <div className="flex flex-col gap-y-5 w-fit">
                             <div className="flex gap-10 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-5 select-none text-left min-w-0">
                                 <div className="flex flex-col min-w-0">
-                                    <p className="text-sm uppercase font-bold text-zinc-300 gap shrink-0">Across</p>
+                                    <p className="text-sm uppercase font-bold text-zinc-300 gap shrink-0 mb-1">Across</p>
                                     {(currentCrossword && currentCrossword.clues.across) && (
                                         currentCrossword.clues.across.map((item, index) => {
                                             const clueKey = `${item.row}-${item.col}-${item.number}`;
                                             const isComplete = completedClues.across.has(clueKey);
                                             return (
-                                                <div onClick={() => handleClueClick(item.row, item.col, "row")} key={index} className="min-w-0">
-                                                    <p className={`text-xs sm:text-sm text-zinc-300 p-1 px-2 transition-opacity break-words hyphens-auto ${item === currentClue ? 'bg-zinc-600 rounded-2xl shadow-inner shadow-zinc-200/30' : ''} ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
+                                                <div onClick={() => handleClueClick(item.row, item.col, "row")} key={index} className="relative min-w-0">
+                                                    <p className={`relative z-10 text-xs sm:text-sm text-zinc-300 p-1 px-2 transition-opacity break-words hyphens-auto ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
+                                                    <AnimatePresence mode="wait">
+                                                        {item === currentClue && (
+                                                            <motion.div
+                                                                className="absolute inset-0 rounded-2xl shadow-inner shadow-zinc-200/30 bg-zinc-600"
+                                                                initial={{ opacity: 0, width: 0 }}
+                                                                animate={{ opacity: 1, width: "100%" }}
+                                                                exit={{ opacity: 0, width: 0 }}
+                                                                transition={{ duration: 0.3 }}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
                                                 </div>
                                             )
                                         })
                                     )}
                                 </div>
                                 <div className="flex flex-col min-w-0">
-                                    <p className="text-sm uppercase font-bold text-zinc-300 shrink-0">Down</p>
+                                    <p className="text-sm uppercase font-bold text-zinc-300 shrink-0 mb-1">Down</p>
                                     {(currentCrossword && currentCrossword.clues.down) && (
                                         currentCrossword.clues.down.map((item, index) => {
                                             const clueKey = `${item.row}-${item.col}-${item.number}`;
                                             const isComplete = completedClues.down.has(clueKey);
                                             return (
-                                                <div onClick={() => handleClueClick(item.row, item.col, "column")} key={index} className="min-w-0">
-                                                    <p className={`text-xs sm:text-sm text-zinc-300 p-1 px-2 transition-opacity break-words hyphens-auto ${item === currentClue ? 'bg-zinc-600 rounded-2xl shadow-inner shadow-zinc-200/30' : ''} ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
+                                                <div onClick={() => handleClueClick(item.row, item.col, "column")} key={index} className="relative min-w-0">
+                                                    <p className={`relative z-10 text-xs sm:text-sm text-zinc-300 p-1 px-2 transition-opacity break-words hyphens-auto ${isComplete ? 'opacity-45' : 'opacity-100'}`} key={index}><span className="font-bold">{item.number}.</span> {item.clue}</p>
+                                                    <AnimatePresence mode="wait">
+                                                        {item === currentClue && (
+                                                            <motion.div
+                                                                className="absolute inset-0 rounded-2xl shadow-inner shadow-zinc-200/30 bg-zinc-600"
+                                                                initial={{ opacity: 0, width: 0 }}
+                                                                animate={{ opacity: 1, width: "100%" }}
+                                                                exit={{ opacity: 0, width: 0 }}
+                                                                transition={{ duration: 0.2 }}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
                                                 </div>
                                             )
                                         })
@@ -998,28 +1299,59 @@ export function MiniCrossword({ onHomeClick }: MiniCrosswordProps) {
                             <div className="flex flex-col gap-2 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-6 select-none text-left min-w-0">
                                 <p className="text-sm uppercase font-bold text-zinc-300">Assist</p>
                                 <div className="flex gap-10 sm:gap-x-8 lg:gap-x-20 select-none text-left min-w-0">
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex gap-1.5 items-center text-center">
-                                            <kbd className="flex w-15 h-8 items-center justify-center text-md font-semibold rounded-md bg-black/20 shadow-inner shadow-zinc-200/20 border border-zinc-600">CTRL</kbd>
-                                            <span className="text-zinc-300">+</span>
-                                            <kbd className="flex w-15 h-8 items-center justify-center text-md font-semibold rounded-md bg-black/20 shadow-inner shadow-zinc-200/20 border border-zinc-600">C</kbd> 
-                                            <span>{"->"}</span>
-                                            <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={checkGrid}>
-                                                <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm">Check Grid</span>
-                                            </button>
+                                    <div className="flex flex-col gap-2 w-[90%]">
+                                        <div className="flex justify-between">
+                                            <div className="flex items-center gap-2 ">
+                                                <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
+                                                <span className="text-zinc-300">+</span>
+                                                <kbd className={`border border-zinc-600 ${keyHeld.c === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>C</kbd>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 w-72">
+                                                <span>{"->"}</span>
+                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => checkGrid}>
+                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm relative z-10">Check Grid</span>
+                                                    <AnimatePresence>
+                                                        {(keyHeld.ctrl && keyHeld.c) && (
+                                                            <motion.div
+                                                                key="ripple"
+                                                                className="absolute inset-0 bg-white/30 rounded-full"
+                                                                initial={{ scale: 0, opacity: 1 }}
+                                                                animate={{ scale: 4, opacity: 0 }}
+                                                                exit={{ opacity: 0 }}
+                                                                transition={{ duration: 0.6, ease: "easeOut" }}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div>
-                                        <div className="flex gap-1.5 items-center text-center">
-                                            <kbd className="flex w-15 h-8 items-center justify-center text-md font-semibold rounded-md bg-black/20 shadow-inner shadow-zinc-200/20 border border-zinc-600">CTRL</kbd>
-                                            <span>+</span>
-                                            <kbd className="flex w-15 h-8 items-center justify-center text-md font-semibold rounded-md bg-black/20 shadow-inner shadow-zinc-200/20 border border-zinc-600">
-                                                <MoveLeft />
-                                            </kbd> 
-                                            <span>{"->"}</span>
-                                            <button type="button" className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={removeIncorrectLetters}>
-                                                <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-xs sm:text-sm">Clear all incorrect letters (after check)</span>
-                                            </button>
-                                        </div>
+                                        <div className="flex justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <kbd className={`border border-zinc-600 ${ keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
+                                                <span>+</span>
+                                                <kbd className={`border border-zinc-600 ${ keyHeld.backspace === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>
+                                                    <MoveLeft />
+                                                </kbd> 
+                                            </div>
+                                            <div className="flex items-center gap-4 w-72">
+                                                <span>{"->"}</span>
+                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => checkGrid}>
+                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-xs sm:text-sm">Clear all incorrect letters (after check)</span>
+                                                    <AnimatePresence>
+                                                        {(keyHeld.ctrl && keyHeld.backspace) && (
+                                                            <motion.div
+                                                                key="ripple"
+                                                                className="absolute inset-0 bg-white/30 rounded-full"
+                                                                initial={{ scale: 0, opacity: 1 }}
+                                                                animate={{ scale: 4, opacity: 0 }}
+                                                                exit={{ opacity: 0 }}
+                                                                transition={{ duration: 0.6, ease: "easeOut" }}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
