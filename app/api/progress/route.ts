@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { prisma } from "../../lib/prisma";
 import { NextResponse } from "next/server";
@@ -47,14 +49,14 @@ export async function POST(req: Request) {
       update: {
         filledGrid,
         timer: timeSpent,
-        isCompleted: (isSolved && user) ? true : false
+        isCompleted: isSolved
       },
       create: {
         userId: user.id,
         puzzleId,
         filledGrid,
         timer: timeSpent,
-        isCompleted: (isSolved && user) ? true : false
+        isCompleted: isSolved
       }
     });
   
