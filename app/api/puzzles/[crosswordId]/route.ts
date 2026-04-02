@@ -3,9 +3,11 @@ import { prisma } from "../../../lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(
-  { params }: { params: Promise<{ crosswordId: string }> }
+  request: Request,
+  context: { params: { crosswordId: string } }
 ) {
-  const { crosswordId } = await params;
+  request;
+  const { crosswordId } = await context.params;
   const token = (await cookies()).get("user_token")?.value;
 
   const user = token
