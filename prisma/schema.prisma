@@ -1,7 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
   name      String?
+  createdAt DateTime @default(now())
+  token     String   @unique
+
   progress  Progress[]
 }
 
@@ -9,19 +20,22 @@ model Puzzle {
   id        String   @id
   date      DateTime
   data      Json
+  createdAt DateTime @default(now())
+
   progress  Progress[]
 }
 
 model Progress {
-  id           String   @id @default(cuid())
-  userId       String
-  puzzleId     String
-  filledGrid   Json
-  isCompleted  Boolean  @default(false)
-  timeSpent    Int?
+  id          String   @id @default(cuid())
+  userId      String
+  puzzleId    String
+  filledGrid  Json
+  timer       Int @default(0)
+  isCompleted Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
 
   user   User   @relation(fields: [userId], references: [id])
   puzzle Puzzle @relation(fields: [puzzleId], references: [id])
 
-  @@unique([userId, puzzleId]) // one progress per puzzle
+  @@unique([userId, puzzleId])
 }
