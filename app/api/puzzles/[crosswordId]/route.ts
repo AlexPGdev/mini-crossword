@@ -3,7 +3,6 @@ import { prisma } from "../../../lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(
-  req: Request,
   { params }: { params: Promise<{ crosswordId: string }> }
 ) {
   const { crosswordId } = await params;
@@ -49,13 +48,13 @@ export async function GET(
   const filledGrid = progress?.filledGrid || emptyGrid;
 
   // 🧠 2. Remove answers from clues
-  const sanitizeClues = (clues: any[]) =>
-    clues.map(({ answer, ...rest }) => rest);
+  // const sanitizeClues = (clues: any[]) =>
+  //   clues.map(({ answer, ...rest }) => rest);
 
-  const sanitizedClues = {
-    across: sanitizeClues(data.clues.across),
-    down: sanitizeClues(data.clues.down)
-  };
+  // const sanitizedClues = {
+  //   across: sanitizeClues(data.clues.across),
+  //   down: sanitizeClues(data.clues.down)
+  // };
 
   // 🚀 3. Return safe data
   // return NextResponse.json({
