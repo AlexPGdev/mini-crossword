@@ -8,5 +8,5 @@ export async function GET() {
     select: { id: true }
   });
 
-  return NextResponse.json(puzzles.map(p => p.id));
+  return NextResponse.json(puzzles.map((p: { id: string }) => p.id));
 }
