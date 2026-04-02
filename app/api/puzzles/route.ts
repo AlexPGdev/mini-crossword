@@ -34,7 +34,7 @@ export async function GET() {
     progressList.map(p => [p.puzzleId, p])
   );
 
-  const result = puzzles.map(puzzle => {
+  const result = puzzles.map((puzzle: any) => {
     const progress = progressMap.get(puzzle.id);
 
     const datePart = puzzle.id.split("-").pop();
