@@ -87,6 +87,9 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
     const accumulatedTimeRef = useRef(0);
     const [timerReady, setTimerReady] = useState(false);
 
+    const [previousRipple, setPreviousRipple] = useState(false);
+    const [nextRipple, setNextRipple] = useState(false);
+
     useEffect(() => {
         if (!crosswordId || allPuzzleIds.length === 0) return;
 
@@ -113,6 +116,10 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             setIncorrectLetters(new Set());
             setIsSolved(puzzle.isCompleted);
             setElapsedSeconds(puzzle.timer);
+            setSelectedTile(null);
+            setHighlightedTiles([]);
+            setPreviousRipple(false);
+            setNextRipple(false);
 
             let puzzleDateRaw = `${puzzle?.id?.split("-")[2]?.slice(0, 4)}/${puzzle?.id?.split("-")[2]?.slice(4, 6)}/${puzzle?.id?.split("-")[2]?.slice(6, 8)}`;
 
@@ -457,7 +464,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                     return newSet;
                 });
     
-                const nextSelection = moveSelectionNextAuto(selected, mode);
+                const nextSelection = moveSelectionNextAuto(selected, mode, true);
                 if (nextSelection) {
                     setSelectedTile(nextSelection.position);
                     setHighlightMode(nextSelection.mode);
@@ -494,8 +501,8 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             checkGrid(true);
         }
         
-        if(!selectedTile) {
-            const nextSelection = moveSelectionNextAuto({row: 0, col: 0}, "row");
+        if(!selectedTile && !isSolvedRef.current) {
+            const nextSelection = moveSelectionNextAuto({row: -1, col: -1}, "row");
             if (nextSelection) {
                 setSelectedTile(nextSelection.position);
                 setHighlightMode(nextSelection.mode);
@@ -554,12 +561,21 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 setIsSolved(true);
                 setCorrectLetters(newCorrect);
                 setShowFinishedRipple(true);
+                if(enabled && (isPreviousEnabled || isNextEnabled)) {
+                    if(isPreviousEnabled) {
+                        setPreviousRipple(true);
+                    } else {
+                        setNextRipple(true);
+                    }
+                }
                 setTimeout(() => {
                     setShowFinishedRipple(false);
 
                     if (enabled && (isPreviousEnabled || isNextEnabled)) {
                         setDirection(isNextEnabled ? 1 : -1);
                         router.push(`/mini-crossword?crossword=${isNextEnabled ? nextCrossword : previousCrossword}`, { scroll: false });
+                        setPreviousRipple(false);
+                        setNextRipple(false);
                     }
                 }, 1000);
 
@@ -611,8 +627,9 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
      */
     function moveSelectionNextAuto(
         current: { row: number; col: number },
-        mode: "row" | "column"
-    ): { position: { row: number; col: number }; mode: "row" | "column" } | null {
+        mode: "row" | "column", 
+        initial: boolean = false
+    ): { position: { row: number; col: number }; mode: "row" | "column"; } | null {
         const crossword = currentCrosswordRef.current;
         if (!crossword?.grid) return null;
 
@@ -656,7 +673,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             const isClueFull = clueCells.every(pos => gridRef.current[pos.row]?.[pos.col] !== null);
 
             if (currentIndex >= 0) {
-                if (isClueFull) {
+                if (isClueFull && initial) {
                     // If clue is fully filled, advance sequentially but don't wrap around
                     const nextIndex = currentIndex + 1;
                     if (nextIndex < clueCells.length) {
@@ -1037,7 +1054,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                         className={`min-h-20 min-w-20 relative
                                                     ${!isLastRow ? "border-b border-black" : ""} 
                                                     ${!isLastCol ? "border-r border-black" : ""} 
-                                                    flex items-center justify-center
+                                                    items-center justify-center
                                                     ${
                                                         cell === "#"
                                                             ? "bg-black"
@@ -1053,7 +1070,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                         {isAnimationsEnabled && (
                                                             <>                                                            
                                                                 <AnimatePresence>
-                                                                    {highlightedSet.has(`${row}-${col}`) && (
+                                                                    {(highlightedSet.has(`${row}-${col}`) && cell !== "#") && (
                                                                         <motion.div
                                                                             layout
                                                                             className="absolute inset-0 z-0 bg-zinc-400/40"
@@ -1089,7 +1106,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                             <AnimatePresence>
                                                                 {(cell !== "#" && (/^[A-Z]$/.test( grid?.[row]?.[col] ?? "" ))) && (
                                                                     <motion.div
-                                                                        layoutId={`letter-${row}-${col}`}
+                                                                        layoutId={`letter-${crosswordId}-${row}-${col}`}
                                                                         className={`relative z-10 flex ${settings.cursiveFont && "font-[cursive]"} h-full w-full items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-shadow-md text-shadow-black/50 
                                                                                 ${correctLetters.has(`${row}-${col}`)
                                                                                     ? "text-green-400"
@@ -1211,18 +1228,51 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                             <div className="flex flex-col gap-4">
                                                 <div className="flex transition-all shadow-inner shadow-zinc-200/30 rounded-full overflow-hidden">
                                                     <button
-                                                        className={`flex w-1/2 justify-center cursor-pointer ${isPreviousEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} hover:bg-zinc-600 p-2 border-r-1 border-zinc-600 ${isPreviousEnabled ? "shadow-inner shadow-zinc-200/30" : ""} hover:shadow-inner hover:shadow-zinc-200/30 active:bg-zinc-500 transition-all`}
+                                                        className={`relative w-1/2 justify-center cursor-pointer ${isPreviousEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} hover:bg-zinc-600 p-2 border-r-1 border-zinc-600 ${isPreviousEnabled ? "shadow-inner shadow-zinc-200/30" : ""} hover:shadow-inner hover:shadow-zinc-200/30 active:bg-zinc-500 transition-all`}
                                                         title="Previous Crossword"
                                                         onClick={() => { setIsPreviousEnabled(!isPreviousEnabled); setIsNextEnabled(false) }}
                                                     >
-                                                        <ChevronLeft /> Previous
+                                                        <div className="flex w-full justify-center">
+                                                            <span className="flex z-10">
+                                                                <ChevronLeft /> Previous
+                                                            </span>
+
+                                                            <AnimatePresence>
+                                                                {previousRipple && (
+                                                                    <motion.div
+                                                                        key="ripple"
+                                                                        className="absolute inset-0 bg-green-500/50 z-0 origin-right"
+                                                                        initial={{ scaleX: 0 }}
+                                                                        animate={{ scaleX: 1 }}
+                                                                        transition={{ duration: 1, ease: "easeOut" }}
+                                                                    />
+                                                                )}
+                                                            </AnimatePresence>
+                                                        </div>
                                                     </button>
+
                                                     <button
-                                                        className={`flex w-1/2 justify-center cursor-pointer ${isNextEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} hover:bg-zinc-600 p-2 border-l-1 border-zinc-600 ${isNextEnabled ? "shadow-inner shadow-zinc-200/30" : ""} hover:shadow-inner hover:shadow-zinc-200/30 active:bg-zinc-500 transition-all`}
+                                                        className={`relative w-1/2 justify-center text-center cursor-pointer ${isNextEnabled ? "bg-zinc-600" : "bg-zinc-600/30"} hover:bg-zinc-600 p-2 border-l-1 border-zinc-600 ${isNextEnabled ? "shadow-inner shadow-zinc-200/30" : ""} hover:shadow-inner hover:shadow-zinc-200/30 active:bg-zinc-500 transition-all`}
                                                         title="Previous Crossword"
                                                         onClick={() => { setIsNextEnabled(!isNextEnabled); setIsPreviousEnabled(false) }}
                                                     >
-                                                        Next <ChevronRight />
+                                                        <div className="flex w-full justify-center">
+                                                            <span className="flex z-10">
+                                                                Next <ChevronRight />
+                                                            </span>
+
+                                                            <AnimatePresence>
+                                                                {nextRipple && (
+                                                                    <motion.div
+                                                                        key="ripple"
+                                                                        className="absolute inset-0 bg-green-500/50 z-0 origin-left"
+                                                                        initial={{ scaleX: 0 }}
+                                                                        animate={{ scaleX: 1 }}
+                                                                        transition={{ duration: 1, ease: "easeOut" }}
+                                                                    />
+                                                                )}
+                                                            </AnimatePresence>
+                                                        </div>
                                                     </button>
                                                 </div>
                                                 {(isPreviousEnabled || isNextEnabled) ? (
