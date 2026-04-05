@@ -48,7 +48,9 @@ export async function GET() {
       isSolved: progress?.isCompleted ?? false,
       timer: progress?.timer ?? null
     };
-  });
 
+  });
+ 
   return NextResponse.json(result);
+
 }

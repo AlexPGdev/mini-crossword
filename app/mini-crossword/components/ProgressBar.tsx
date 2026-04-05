@@ -1,6 +1,8 @@
 "use client"
 
 import { memo } from "react"
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 interface ProgressBarProps {
     streaks: any[];
@@ -16,7 +18,11 @@ export const ProgressBar = memo(function ProgressBar({ streaks }: ProgressBarPro
         <div className="flex flex-col bg-zinc-800 w-full rounded-2xl justify-between px-5 py-2 select-none hover:bg-zinc-700/40 hover:brightness-120 transition-all shadow-inner shadow-zinc-200/30">
             <div className="flex justify-between w-full">
                 <p className="text-sm text-zinc-300 uppercase tracking-wider">Progress To Completion</p>
-                <p className="text-sm text-zinc-300 uppercase"><span className="text-green-600">{completed}</span> / {total}</p>
+                {!completed && !total || false ? (
+                    <Skeleton width={50} height={10} baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />
+                ) : (
+                    <p className="text-sm text-zinc-300 uppercase h-6"><span className="text-green-600">{completed}</span> / {total}</p>
+                )}
             </div>
             <div className="flex w-full h-4 bg-zinc-600 rounded-full mt-2 overflow-hidden shadow-inner shadow-zinc-200/30">
                 <div className="flex h-full bg-green-600 text-center items-center justify-center shadow-inner shadow-green-400/50" style={{ width: `${((completed-completedToday) / total * 100).toFixed(2)}%` }}>

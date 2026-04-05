@@ -27,13 +27,17 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
     let fastest = { timer: Infinity }
 
     function useFastestComplete(puzzles: any[]) {
-        return puzzles.reduce((acc, curr) => {
-            if (curr.isSolved && curr.timer < fastest.timer) {
-                fastest = curr;
-                return curr;
-            }
-            return acc;
-        }, {});
+        if(!puzzles.find((p) => p.isSolved)) {
+            return { timer: 0, puzzleId: "" }
+        } else {
+            return puzzles.reduce((acc, curr) => {
+                if (curr.isSolved && curr.timer < fastest.timer) {
+                    fastest = curr;
+                    return curr;
+                }
+                return acc;
+            }, {});
+        }
     }
 
     const averageComplete = useAverageComplete(puzzles);
@@ -43,8 +47,8 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
         () => ({
             total: puzzles.length,
             completed: puzzles.filter((p) => p.isSolved).length,
-            averageComplete: averageComplete,
-            fastestComplete: fastestComplete,
+            averageComplete: averageComplete || 0,
+            fastestComplete: fastestComplete || { timer: 1, puzzleId: "", date: "" },
         }),
         [puzzles, averageComplete, fastestComplete]
     );
@@ -100,6 +104,7 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
                 const newPuzzles = [...prev];
                 const index = newPuzzles.findIndex(p => p.puzzleId === crosswordId);
                 newPuzzles[index].isSolved = true;
+                newPuzzles[index].timer = data.timer;
                 return newPuzzles;
             });
         }

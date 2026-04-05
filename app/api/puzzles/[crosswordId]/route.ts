@@ -81,4 +81,5 @@ export async function GET(
     timer: progress?.timer || 0,
     isCompleted: progress?.isCompleted || false
   });
+
 }

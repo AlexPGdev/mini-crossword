@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SettingsModal } from "./SettingsModal";
 import { useSettings } from "../hooks/useSettings";
 import { usePuzzles } from "../hooks/usePuzzles";
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 interface MiniCrosswordProps {
     onHomeClick: () => void;
@@ -75,7 +77,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
     const [solvedGrid, setSolvedGrid] = useState<(string | null)[][]>([[]]);
     const solvedGridRef = useRef<(string | null)[][]>([[]]);
 
-    const [keyHeld, setKeyHeld] = useState<{ ctrl: Boolean, c: Boolean, backspace: Boolean }>({ ctrl: false, c: false, backspace: false });
+    const [keyHeld, setKeyHeld] = useState<{ ctrl: Boolean, c: Boolean, backspace: Boolean, l: Boolean }>({ ctrl: false, c: false, backspace: false, l: false });
     const [showFinishedRipple, setShowFinishedRipple] = useState(false);
 
     const [invalidInput, setInvalidInput] = useState({ show: false, input: "" });
@@ -244,6 +246,9 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             }
             else if(e.ctrlKey && e.key === "Backspace"){
                 setKeyHeld(prev => ({ ...prev, backspace: true }));
+            }
+            else if(e.ctrlKey && e.key.toLowerCase() === "l"){
+                setKeyHeld(prev => ({ ...prev, l: true }));
             }
 
 
@@ -430,6 +435,12 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 return;
             }
 
+            if (e.key.toLowerCase() === 'l' && e.ctrlKey) {
+                e.preventDefault();
+                revealLetter();
+                return;
+            }
+
             const key = e.key.toUpperCase();
             if (!/^[A-Z]$/.test(key)){
 
@@ -479,12 +490,16 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 setKeyHeld(prev => ({ ...prev, ctrl: false }));
                 setKeyHeld(prev => ({ ...prev, c: false }));
                 setKeyHeld(prev => ({ ...prev, backspace: false }));
+                setKeyHeld(prev => ({ ...prev, l: false }));
             }
             else if(e.key.toLowerCase() === "c"){
                 setKeyHeld(prev => ({ ...prev, c: false }));
             }
             else if(e.key === "Backspace"){
                 setKeyHeld(prev => ({ ...prev, backspace: false }));
+            }
+            else if(e.key.toLowerCase() === "l"){
+                setKeyHeld(prev => ({ ...prev, l: false }));
             }
         }
 
@@ -584,6 +599,34 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
         } else {
             setCorrectLetters(newCorrect);
             setIncorrectLetters(newIncorrect);
+        }
+    }
+
+    function revealLetter() {
+        const userGrid = gridRef.current;
+
+        if (!userGrid || userGrid?.length === 1 || crosswordId === null) return;
+
+        const solution = solvedGridRef.current;
+
+        let letter = solution?.[selectedTileRef?.current?.row || 0]?.[selectedTileRef?.current?.col || 0];
+
+        if (letter === "#") return;
+
+        setGrid(prev => {
+            const newGrid = prev.map(r => [...r]);
+            if (selectedTileRef.current) {
+                const { row, col } = selectedTileRef.current;
+                newGrid[row] && (newGrid[row][col] = letter || null);
+            }
+            return newGrid;
+        });
+
+        const nextSelection = moveSelectionNextAuto(selectedTileRef.current || { row: -1, col: -1 }, "row");
+        if (nextSelection) {
+            setSelectedTile(nextSelection.position);
+            setHighlightMode(nextSelection.mode);
+            setHighlightedTiles(getHighlightedTiles(nextSelection.position, nextSelection.mode));
         }
     }
 
@@ -1033,6 +1076,11 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                 className="w-full max-w-[min(100%,22rem)] sm:max-w-sm md:max-w-md overflow-hidden lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl aspect-square mx-auto xl:mx-0 rounded-2xl"
                             >
                                 <div className="relative h-full w-full">
+
+                                    {(!currentCrossword?.grid || currentCrossword?.grid.length === 0) && (
+                                        <Skeleton width={"100%"} height={"100%"} baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />
+                                    )}
+
                                     <div
                                         className="grid h-full w-full rounded-2xl overflow-hidden select-none border-1 border-zinc-800 relative z-10"
                                         style={{
@@ -1188,7 +1236,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                         <MoveLeft className="size-[18px] sm:size-6" />
                                     </button>
                                 </div>
-                                <p className="text-sm sm:text-base px-2 min-w-0 truncate" title={formatedTitle}>{formatedTitle}</p>
+                                <p className="text-sm sm:text-base px-2 min-w-0 truncate" title={formatedTitle}>{formatedTitle ? formatedTitle : <Skeleton width={100} height={20} baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />}</p>
                                 <div className="shrink-0">
                                     <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all" title="Next Crossword" onClick={() => changePuzzle(1)}>
                                         <MoveRight className="size-[18px] sm:size-6" />
@@ -1287,11 +1335,11 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-y-5 w-fit">
+                        <div className="flex flex-col gap-y-5 w-full">
                             <div className="flex gap-10 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-5 select-none text-left min-w-0">
                                 <div className="flex flex-col min-w-0">
                                     <p className="text-sm uppercase font-bold text-zinc-300 gap shrink-0 mb-1">Across</p>
-                                    {(currentCrossword && currentCrossword.clues.across) && (
+                                    {(currentCrossword && currentCrossword.clues.across && currentCrossword.clues.across.length > 0) ? (
                                         currentCrossword.clues.across.map((item, index) => {
                                             const clueKey = `${item.row}-${item.col}-${item.number}`;
                                             const isComplete = completedClues.across.has(clueKey);
@@ -1312,11 +1360,13 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                 </div>
                                             )
                                         })
+                                    ) : (
+                                        <Skeleton count={5} width={150} height={20} className="mt-2" baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />
                                     )}
                                 </div>
                                 <div className="flex flex-col min-w-0">
                                     <p className="text-sm uppercase font-bold text-zinc-300 shrink-0 mb-1">Down</p>
-                                    {(currentCrossword && currentCrossword.clues.down) && (
+                                    {(currentCrossword && currentCrossword.clues.down && currentCrossword.clues.down.length > 0) ? (
                                         currentCrossword.clues.down.map((item, index) => {
                                             const clueKey = `${item.row}-${item.col}-${item.number}`;
                                             const isComplete = completedClues.down.has(clueKey);
@@ -1337,15 +1387,17 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                 </div>
                                             )
                                         })
+                                    ) : (
+                                        <Skeleton count={5} width={150} height={20} className="mt-2" baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />
                                     )}
                                 </div>
                             </div>
                             <div className="flex flex-col gap-2 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-6 select-none text-left min-w-0">
                                 <p className="text-sm uppercase font-bold text-zinc-300">Assist</p>
-                                <div className="flex gap-10 sm:gap-x-8 lg:gap-x-20 select-none text-left min-w-0">
-                                    <div className="flex flex-col gap-2 w-[90%]">
+                                <div className="flex select-none text-left min-w-0">
+                                    <div className="flex flex-col gap-2 w-fit">
                                         <div className="flex justify-between">
-                                            <div className="flex items-center gap-2 ">
+                                            <div className="flex items-center gap-2 mr-4">
                                                 <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
                                                 <span className="text-zinc-300">+</span>
                                                 <kbd className={`border border-zinc-600 ${keyHeld.c === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>C</kbd>
@@ -1371,7 +1423,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                             </div>
                                         </div>
                                         <div className="flex justify-between">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 mr-4">
                                                 <kbd className={`border border-zinc-600 ${ keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
                                                 <span>+</span>
                                                 <kbd className={`border border-zinc-600 ${ keyHeld.backspace === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>
@@ -1381,9 +1433,37 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                             <div className="flex items-center gap-4 w-72">
                                                 <span>{"->"}</span>
                                                 <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => checkGrid}>
-                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-xs sm:text-sm">Clear all incorrect letters (after check)</span>
+                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-xs sm:text-sm">Clear all incorrect letters</span>
                                                     <AnimatePresence>
                                                         {(keyHeld.ctrl && keyHeld.backspace) && (
+                                                            <motion.div
+                                                                key="ripple"
+                                                                className="absolute inset-0 bg-white/30 rounded-full"
+                                                                initial={{ scale: 0, opacity: 1 }}
+                                                                animate={{ scale: 4, opacity: 0 }}
+                                                                exit={{ opacity: 0 }}
+                                                                transition={{ duration: 0.6, ease: "easeOut" }}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 w-fit">
+                                        <div className="flex justify-between">
+                                            <div className="flex items-center gap-2 mr-4">
+                                                <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
+                                                <span className="text-zinc-300">+</span>
+                                                <kbd className={`border border-zinc-600 ${keyHeld.l === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>L</kbd>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 w-72">
+                                                <span>{"->"}</span>
+                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => revealLetter()}>
+                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm relative z-10">Reveal Letter</span>
+                                                    <AnimatePresence>
+                                                        {(keyHeld.ctrl && keyHeld.l) && (
                                                             <motion.div
                                                                 key="ripple"
                                                                 className="absolute inset-0 bg-white/30 rounded-full"
@@ -1405,7 +1485,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                 <button className="flex w-fit bg-green-700 rounded-full text-center contents-center justify-center items-center shadow-inner shadow-green-200/50 hover:shadow-green-300/30 cursor-pointer hover:bg-green-600 transition-all">
                                     <span className="px-6 py-2 text-green-200 text-sm hover:text-green-100">+ Create Room</span>
                                 </button>
-                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center min-h-[40px]">
+                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center min-h-[40px] w-fit">
                                     <input className="w-full min-h-[40px] bg-zinc-700/80 rounded-full text-sm text-zinc-300 p-2 px-6 focus:outline-1 focus:outline-zinc-400 min-w-0 shadow-inner shadow-zinc-200/30 hover:bg-zinc-600 hover:shadow-zinc-300/30 transition-all" placeholder="Enter code" />
                                     <button className="flex w-fit bg-zinc-700 rounded-full text-center contents-center justify-center items-center shadow-inner shadow-zinc-200/30 hover:shadow-zinc-300/30 cursor-pointer hover:bg-zinc-600 transition-all">
                                         <span className="px-6 py-2 text-zinc-300 text-sm hover:text-zinc-100">Join</span>

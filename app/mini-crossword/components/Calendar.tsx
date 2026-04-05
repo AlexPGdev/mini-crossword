@@ -2,6 +2,8 @@
 
 import { memo, useMemo } from "react"
 import { useRouter } from "next/navigation";
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -126,6 +128,14 @@ export const Calendar = memo(function Calendar ({ onTileClick, streaks }: Calend
     return (
         <div className="grid grid-cols-3 gap-4 w-full select-none transition-all">
             
+            {!months || months.length === 0 && (
+                <>
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                        <Skeleton key={idx} width={'100%'} height={450} className="rounded-full" baseColor="#27272a" highlightColor="#3c3c3e" borderRadius={"1rem"} />
+                    ))}
+                </>
+            )}
+
             {months.flatMap((month, idx) => {
                 const firstDate = new Date(month.year, month.month, 1)
 

@@ -19,11 +19,14 @@ interface HomeProps {
 
 function HomeContent({ streaks }: HomeProps) {
   const searchParams = useSearchParams();
-  const [isPuzzleActive, setIsPuzzleActive] = useState(true);
+  const [isPuzzleActive, setIsPuzzleActive] = useState(false);
   const [allPuzzleIds, setAllPuzzleIds] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+
+    console.log(streaks.length)
+
       fetch("/api/user")
         .then(res => res.json())
         .then(user => {
