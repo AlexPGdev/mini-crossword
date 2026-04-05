@@ -254,8 +254,9 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
             if (e.key === 'Backspace') {
                 if (isSolvedRef.current) return;
-
+                
                 if (e.ctrlKey) {
+                    e.preventDefault();
                     removeIncorrectLetters();
                 } else {
                     setGrid(prev => {
@@ -1432,7 +1433,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                             </div>
                                             <div className="flex items-center gap-4 w-72">
                                                 <span>{"->"}</span>
-                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => checkGrid}>
+                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => removeIncorrectLetters()}>
                                                     <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-xs sm:text-sm">Clear all incorrect letters</span>
                                                     <AnimatePresence>
                                                         {(keyHeld.ctrl && keyHeld.backspace) && (
