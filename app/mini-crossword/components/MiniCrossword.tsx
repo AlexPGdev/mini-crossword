@@ -77,7 +77,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
     const [solvedGrid, setSolvedGrid] = useState<(string | null)[][]>([[]]);
     const solvedGridRef = useRef<(string | null)[][]>([[]]);
 
-    const [keyHeld, setKeyHeld] = useState<{ ctrl: Boolean, c: Boolean, backspace: Boolean, l: Boolean }>({ ctrl: false, c: false, backspace: false, l: false });
+    const [keyHeld, setKeyHeld] = useState<{ ctrl: Boolean, c: Boolean, backspace: Boolean, l: Boolean, number: Boolean }>({ ctrl: false, c: false, backspace: false, l: false, number: false });
     const [showFinishedRipple, setShowFinishedRipple] = useState(false);
 
     const [invalidInput, setInvalidInput] = useState({ show: false, input: "" });
@@ -249,6 +249,8 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             }
             else if(e.ctrlKey && e.key.toLowerCase() === "l"){
                 setKeyHeld(prev => ({ ...prev, l: true }));
+            } else if(e.ctrlKey && e.key.match(/^[0-9]$/)) {
+                setKeyHeld(prev => ({ ...prev, number: true }));
             }
 
 
@@ -442,6 +444,67 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 return;
             }
 
+            if (e.ctrlKey && e.key.match(/^[0-9]$/)) {
+                e.preventDefault();
+                const number = e.key;
+
+                const { row, col } = selectedTileRef.current || { row: -1, col: -1 };
+
+                let clue = null;
+
+                if (highlightModeRef.current === 'row') {
+                    const acrossClues = currentCrosswordRef.current.clues.across.filter(c => c.row === row && c.col <= col);
+                    clue = acrossClues.sort((a, b) => b.col - a.col)[0];
+                } else {
+                    const downClues = currentCrosswordRef.current.clues.down.filter(c => c.col === col && c.row <= row);
+                    clue = downClues.sort((a, b) => b.row - a.row)[0];
+                }
+
+                if((clue && parseInt(number) === clue?.number) && (selectedTileRef.current?.col === clue.col && selectedTileRef.current?.row === clue.row)) {
+                    if(highlightModeRef.current === "row") {
+                        if(!currentCrosswordRef.current.clues.down.find(c => c.number === parseInt(number))) {
+                            return;
+                        }
+                    } else {
+                        if(!currentCrosswordRef.current.clues.across.find(c => c.number === parseInt(number))) {
+                            return;
+                        }
+                    }
+
+                    if(selectedTileRef.current) {
+                        const nextMode = highlightModeRef.current === 'row' ? 'column' : 'row';
+                        setHighlightMode(nextMode);
+                        setHighlightedTiles(getHighlightedTiles(selectedTileRef.current, nextMode));
+                    }
+
+                    return;
+                }
+
+                if(highlightModeRef.current === "row") {
+                    const clue = currentCrosswordRef.current.clues.across.find(c => c.number === parseInt(number));
+                    if (clue) {
+                        handleClueClick(clue.row, clue.col, "row");
+                    } else {
+                        const clueDown = currentCrosswordRef.current.clues.down.find(c => c.number === parseInt(number));
+                        if (clueDown) {
+                            handleClueClick(clueDown.row, clueDown.col, "column");
+                        }
+                    }
+                } else {
+                    const clue = currentCrosswordRef.current.clues.down.find(c => c.number === parseInt(number));
+                    if (clue) {
+                        handleClueClick(clue.row, clue.col, "column");
+                    } else {
+                        const clueAcross = currentCrosswordRef.current.clues.across.find(c => c.number === parseInt(number));
+                        if (clueAcross) {
+                            handleClueClick(clueAcross.row, clueAcross.col, "row");
+                        }
+                    }
+                }
+
+                return;
+            }
+
             const key = e.key.toUpperCase();
             if (!/^[A-Z]$/.test(key)){
 
@@ -492,6 +555,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 setKeyHeld(prev => ({ ...prev, c: false }));
                 setKeyHeld(prev => ({ ...prev, backspace: false }));
                 setKeyHeld(prev => ({ ...prev, l: false }));
+                setKeyHeld(prev => ({ ...prev, number: false }));
             }
             else if(e.key.toLowerCase() === "c"){
                 setKeyHeld(prev => ({ ...prev, c: false }));
@@ -501,6 +565,8 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             }
             else if(e.key.toLowerCase() === "l"){
                 setKeyHeld(prev => ({ ...prev, l: false }));
+            } else if(e.key.match(/^[0-9]$/)) {
+                setKeyHeld(prev => ({ ...prev, number: false }));
             }
         }
 
@@ -1476,6 +1542,18 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                         )}
                                                     </AnimatePresence>
                                                 </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <div className="flex items-center gap-2 mr-4">
+                                                <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
+                                                <span className="text-zinc-300">+</span>
+                                                <kbd className={`border border-zinc-600 ${keyHeld.number === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all text-nowrap`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>0-9</kbd>
+                                            </div>
+
+                                            <div className="flex items-center w-72">
+                                                <span>{"->"}</span>
+                                                <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm relative z-10">Highlight Clue</span>
                                             </div>
                                         </div>
                                     </div>
