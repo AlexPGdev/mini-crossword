@@ -27,7 +27,8 @@ export async function GET() {
       select: {
         puzzleId: true,
         isCompleted: true,
-        timer: true
+        timer: true,
+        updatedAt: true
       }
     });
   }
@@ -46,7 +47,8 @@ export async function GET() {
       date: puzzle.date,
       hasProgress: !!progress,
       isSolved: progress?.isCompleted ?? false,
-      timer: progress?.timer ?? null
+      timer: progress?.timer ?? null,
+      updatedAt: progress?.updatedAt ?? null,
     };
 
   });

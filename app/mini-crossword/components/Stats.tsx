@@ -40,6 +40,17 @@ export const Stats = memo(function Stats({ stats }: StatsProps) {
                 <p className="text-sm text-zinc-400">overall</p>
             </div>
             <div className="flex flex-col w-1/4 items-center border-r-2 border-zinc-600 p-2 hover:bg-zinc-700/20 hover:brightness-120 transition-all">
+                <p className="text-sm text-zinc-300 uppercase tracking-wider">Last Completed</p>
+                {!stats.completed && !stats.total ? (
+                    <Skeleton count={1} width={80} height={24} className="my-1" baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />
+                ) : (
+                    <a className="text-2xl text-blue-200/80 font-bold italic cursor-pointer hover:underline" href={`/mini-crossword?crossword=${stats.lastCompleted.puzzleId}`}>{new Date(stats.lastCompleted.date).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"})}</a>
+                )}
+                {stats.lastCompleted.date && (
+                    <p className="text-sm text-green-600">on {new Date(stats.lastCompleted.updatedAt).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"})}</p>
+                )}
+            </div>
+            <div className="flex flex-col w-1/4 items-center border-r-2 border-zinc-600 p-2 hover:bg-zinc-700/20 hover:brightness-120 transition-all">
                 <p className="text-sm text-zinc-300 uppercase tracking-wider">Avg Time</p>
                 {!stats.completed && !stats.total ? (
                     <Skeleton count={1} width={80} height={24} className="my-1" baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />

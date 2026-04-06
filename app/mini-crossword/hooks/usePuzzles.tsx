@@ -40,8 +40,29 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
         }
     }
 
+    function lastCompleted(puzzles: any[]) {
+        const solved = puzzles.filter((p) => p.isSolved && p.updatedAt)
+        if (!solved.length) {
+            return { updatedAt: null, puzzleId: "", date: "" }
+        }
+
+        const latest = solved.reduce((acc, curr) => {
+            const accTime = new Date(acc.updatedAt).getTime()
+            const currTime = new Date(curr.updatedAt).getTime()
+            return currTime > accTime ? curr : acc
+        }, solved[0])
+
+        return {
+            updatedAt: latest.updatedAt,
+            puzzleId: latest.puzzleId,
+            date: latest.date ?? latest.updatedAt,
+        }
+    }
+
     const averageComplete = useAverageComplete(puzzles);
     const fastestComplete = useFastestComplete(puzzles);
+    const lastCompletedPuzzle = lastCompleted(puzzles);
+    
 
     const stats = useMemo(
         () => ({
@@ -49,8 +70,9 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
             completed: puzzles.filter((p) => p.isSolved).length,
             averageComplete: averageComplete || 0,
             fastestComplete: fastestComplete || { timer: 1, puzzleId: "", date: "" },
+            lastCompleted: lastCompletedPuzzle,
         }),
-        [puzzles, averageComplete, fastestComplete]
+        [puzzles, averageComplete, fastestComplete, lastCompletedPuzzle]
     );
 
     const loadPuzzles = useCallback(async () => {
@@ -95,6 +117,7 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
                 const newPuzzles = [...prev];
                 const index = newPuzzles.findIndex(p => p.puzzleId === crosswordId);
                 newPuzzles[index].hasProgress = true;
+                newPuzzles[index].updatedAt = new Date();
                 return newPuzzles;
             });
         }
@@ -105,6 +128,7 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
                 const index = newPuzzles.findIndex(p => p.puzzleId === crosswordId);
                 newPuzzles[index].isSolved = true;
                 newPuzzles[index].timer = data.timer;
+                newPuzzles[index].updatedAt = new Date();
                 return newPuzzles;
             });
         }

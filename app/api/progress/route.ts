@@ -56,7 +56,8 @@ export async function POST(req: Request) {
         puzzleId,
         filledGrid,
         timer: timeSpent,
-        isCompleted: isSolved
+        isCompleted: isSolved,
+        updatedAt: new Date()
       }
     });
   
