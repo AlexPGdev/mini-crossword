@@ -79,7 +79,9 @@ export async function GET(
     clues: data.clues,
     size: data.size,
     timer: progress?.timer || 0,
-    isCompleted: progress?.isCompleted || false
+    isCompleted: progress?.isCompleted || false,
+    checkGridCount: progress?.checkGridCount || 0,
+    revealedLetterCount: progress?.revealedLetterCount || 0,
   });
 
 }

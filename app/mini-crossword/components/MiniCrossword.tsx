@@ -79,6 +79,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
     const [keyHeld, setKeyHeld] = useState<{ ctrl: Boolean, c: Boolean, backspace: Boolean, l: Boolean, number: Boolean }>({ ctrl: false, c: false, backspace: false, l: false, number: false });
     const [showFinishedRipple, setShowFinishedRipple] = useState(false);
+    const [showFinishedBanner, setShowFinishedBanner] = useState(false);
 
     const [invalidInput, setInvalidInput] = useState({ show: false, input: "" });
 
@@ -91,6 +92,12 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
     const [previousRipple, setPreviousRipple] = useState(false);
     const [nextRipple, setNextRipple] = useState(false);
+
+    const [checkGridCount, setCheckGridCount] = useState(0);
+    const [revealedLetterCount, setRevealedLetterCount] = useState(0);
+
+    const checkGridCountRef = useRef(0);
+    const revealedLetterCountRef = useRef(0);
 
     useEffect(() => {
         if (!crosswordId || allPuzzleIds.length === 0) return;
@@ -122,6 +129,8 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             setHighlightedTiles([]);
             setPreviousRipple(false);
             setNextRipple(false);
+            setCheckGridCount(puzzle.checkGridCount);
+            setRevealedLetterCount(puzzle.revealedLetterCount);
 
             let puzzleDateRaw = `${puzzle?.id?.split("-")[2]?.slice(0, 4)}/${puzzle?.id?.split("-")[2]?.slice(4, 6)}/${puzzle?.id?.split("-")[2]?.slice(6, 8)}`;
 
@@ -153,12 +162,14 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             saveProgress(
                 crosswordId || "",
                 gridRef.current,
-                Math.floor(getCurrentTimeMs() / 1000)
+                Math.floor(getCurrentTimeMs() / 1000),
+                checkGridCountRef.current,
+                revealedLetterCountRef.current
             );
         }, 1000);
 
         return () => clearTimeout(timeout);
-    }, [grid, timerReady]);
+    }, [grid, timerReady, checkGridCount, revealedLetterCount]);
 
     useEffect(() => {
         if (!currentCrossword?.puzzleId || isSolvedRef.current) return;
@@ -167,12 +178,14 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             saveProgress(
                 crosswordId || "",
                 gridRef.current,
-                Math.floor(getCurrentTimeMs() / 1000)
+                Math.floor(getCurrentTimeMs() / 1000),
+                checkGridCountRef.current,
+                revealedLetterCountRef.current
             );
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [currentCrossword, isSolved]);
+    }, [currentCrossword, isSolved, checkGridCount, revealedLetterCount]);
 
     useEffect(() => {
         solvedGridRef.current = solvedGrid;
@@ -189,6 +202,14 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
     useEffect(() => {
         incorrectLettersRef.current = incorrectLetters;
     }, [incorrectLetters]);
+
+    useEffect(() => {
+        checkGridCountRef.current = checkGridCount;
+    }, [checkGridCount]);
+
+    useEffect(() => {
+        revealedLetterCountRef.current = revealedLetterCount;
+    }, [revealedLetterCount]);
 
     useEffect(() => {
         currentCrosswordRef.current = currentCrossword;
@@ -610,6 +631,10 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
         if (!userGrid || userGrid?.length === 1 || crosswordId === null) return;
 
+        console.log(checkGridCountRef.current)
+
+        if(checkGridCountRef.current >= 3 && !checkSolved) return;
+
         const solution = solvedGridRef.current;
 
         const newCorrect = new Set<string>();
@@ -629,12 +654,18 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
             });
         });
 
-        if(checkSolved) {
+        if(!checkSolved) {
+            setCheckGridCount(prev => prev + 1);
+        }
+
+        if(checkSolved && !isSolvedRef.current) {
             if (newIncorrect.size === 0) {
                 saveProgress(
                     crosswordId || "",
                     userGrid,
-                    Math.floor(getCurrentTimeMs() / 1000)
+                    Math.floor(getCurrentTimeMs() / 1000),
+                    checkGridCountRef.current,
+                    revealedLetterCountRef.current
                 ).then((time) => {
                     accumulatedTimeRef.current = time * 1000;
                     startTimeRef.current = Date.now();
@@ -643,6 +674,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 setIsSolved(true);
                 setCorrectLetters(newCorrect);
                 setShowFinishedRipple(true);
+                setShowFinishedBanner(true);
                 if(enabled && (isPreviousEnabled || isNextEnabled)) {
                     if(isPreviousEnabled) {
                         setPreviousRipple(true);
@@ -661,6 +693,10 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                     }
                 }, 1000);
 
+                setTimeout(() => {
+                    setShowFinishedBanner(false);
+                }, 5000);
+
             }
 
         } else {
@@ -674,11 +710,15 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
         if (!userGrid || userGrid?.length === 1 || crosswordId === null) return;
 
+        if(revealedLetterCountRef.current >= 2) return;
+
         const solution = solvedGridRef.current;
 
         let letter = solution?.[selectedTileRef?.current?.row || 0]?.[selectedTileRef?.current?.col || 0];
 
         if (letter === "#") return;
+
+        setRevealedLetterCount(prev => prev + 1);
 
         setGrid(prev => {
             const newGrid = prev.map(r => [...r]);
@@ -1122,6 +1162,23 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                 <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
                 <div className="flex flex-col bg-zinc-800 w-full max-w-full min-w-0 shadow-inner shadow-zinc-200/30 rounded-2xl justify-between px-3 py-3 sm:px-5 sm:py-4 gap-y-4 sm:gap-y-5 overflow-x-hidden" style={{ scrollbarWidth: "none" }}>
+                    <AnimatePresence mode="wait">
+                        {showFinishedBanner && (
+                            <motion.div
+                                key={`congrats`}
+                                className="z-99 absolute left-0 right-0 p-2 px-40 pointer-events-none bg-green-700/80 backdrop-blur-sm rounded-2xl w-fit ml-auto mr-auto "
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 5 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <div>
+                                    <p className="text-2xl text-zinc-200 text-center">Congratulations!</p>
+                                    <p className="text-sm text-zinc-200 text-center">You solved the crossword in {timerLabel}</p>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                     <div className="flex flex-col gap-3 border-b-2 border-zinc-600 pb-3 sm:pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-2">
                         <div className="flex flex-wrap items-center gap-y-2 gap-x-2 sm:gap-x-4">
                             <div className="flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 rounded-full shadow-inner shadow-zinc-200/30 active:bg-zinc-500 transition-all shrink-0 p-2">
@@ -1286,7 +1343,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                     exit={{ opacity: 0, y: 20 }}
                                                     transition={{ duration: 0.3 }}
                                                 >
-                                                    <p className="text-sm text-zinc-300 text-center">Invaild Input:
+                                                    <p className="text-sm text-zinc-300 text-center">Invalid Input:
                                                         <kbd className={`ml-2 border border-zinc-600 bg-zinc-800 text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>{invalidInput.input}</kbd>
                                                     </p>
                                                 </motion.div>
@@ -1403,7 +1460,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                         </div>
 
                         <div className="flex flex-col gap-y-5 w-full">
-                            <div className="flex gap-10 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-5 select-none text-left min-w-0">
+                            <div className="flex gap-5 sm:gap-x-8 lg:gap-x-5 border-b-1 border-zinc-600 pb-4 sm:pb-5 select-none text-left min-w-0">
                                 <div className="flex flex-col min-w-0">
                                     <p className="text-sm uppercase font-bold text-zinc-300 gap shrink-0 mb-1">Across</p>
                                     {(currentCrossword && currentCrossword.clues.across && currentCrossword.clues.across.length > 0) ? (
@@ -1459,7 +1516,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                     )}
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-2 sm:gap-x-8 lg:gap-x-20 border-b-1 border-zinc-600 pb-4 sm:pb-6 select-none text-left min-w-0">
+                            <div className="flex flex-col gap-2 sm:gap-x-8 lg:gap-x-10 sm:pb-6 select-none text-left min-w-0">
                                 <p className="text-sm uppercase font-bold text-zinc-300">Assist</p>
                                 <div className="flex select-none text-left min-w-0">
                                     <div className="flex flex-col gap-2 w-fit">
@@ -1478,7 +1535,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                         {(keyHeld.ctrl && keyHeld.c) && (
                                                             <motion.div
                                                                 key="ripple"
-                                                                className="absolute inset-0 bg-white/30 rounded-full"
+                                                                className={`absolute inset-0 ${checkGridCountRef.current >= 3 ? "bg-red-500/50" : "bg-white/30"} rounded-full`}
                                                                 initial={{ scale: 0, opacity: 1 }}
                                                                 animate={{ scale: 4, opacity: 0 }}
                                                                 exit={{ opacity: 0 }}
@@ -1487,6 +1544,34 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                         )}
                                                     </AnimatePresence>
                                                 </button>
+                                                <p>({3-checkGridCountRef.current} remaining)</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <div className="flex items-center gap-2 mr-4">
+                                                <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
+                                                <span className="text-zinc-300">+</span>
+                                                <kbd className={`border border-zinc-600 ${keyHeld.l === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>L</kbd>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 w-72">
+                                                <span>{"->"}</span>
+                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => revealLetter()}>
+                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm relative z-10">Reveal Letter</span>
+                                                    <AnimatePresence>
+                                                        {(keyHeld.ctrl && keyHeld.l) && (
+                                                            <motion.div
+                                                                key="ripple"
+                                                                className={`absolute inset-0 ${revealedLetterCountRef.current >= 2 ? "bg-red-500/50" : "bg-white/30"} rounded-full`}
+                                                                initial={{ scale: 0, opacity: 1 }}
+                                                                animate={{ scale: 4, opacity: 0 }}
+                                                                exit={{ opacity: 0 }}
+                                                                transition={{ duration: 0.6, ease: "easeOut" }}
+                                                            />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </button>
+                                                <p>({2-revealedLetterCountRef.current} remaining)</p>
                                             </div>
                                         </div>
                                         <div className="flex justify-between">
@@ -1516,34 +1601,6 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2 w-fit">
-                                        <div className="flex justify-between">
-                                            <div className="flex items-center gap-2 mr-4">
-                                                <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
-                                                <span className="text-zinc-300">+</span>
-                                                <kbd className={`border border-zinc-600 ${keyHeld.l === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>L</kbd>
-                                            </div>
-
-                                            <div className="flex items-center gap-4 w-72">
-                                                <span>{"->"}</span>
-                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => revealLetter()}>
-                                                    <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm relative z-10">Reveal Letter</span>
-                                                    <AnimatePresence>
-                                                        {(keyHeld.ctrl && keyHeld.l) && (
-                                                            <motion.div
-                                                                key="ripple"
-                                                                className="absolute inset-0 bg-white/30 rounded-full"
-                                                                initial={{ scale: 0, opacity: 1 }}
-                                                                animate={{ scale: 4, opacity: 0 }}
-                                                                exit={{ opacity: 0 }}
-                                                                transition={{ duration: 0.6, ease: "easeOut" }}
-                                                            />
-                                                        )}
-                                                    </AnimatePresence>
-                                                </button>
-                                            </div>
-                                        </div>
                                         <div className="flex justify-between">
                                             <div className="flex items-center gap-2 mr-4">
                                                 <kbd className={`border border-zinc-600 ${keyHeld.ctrl === true ? "bg-zinc-600/40 scale-95" : "" } text-[1em] font-semibold rounded-[3px] my-[2px] mx-[3px] py-[1px] px-[10px] transition-all`} style={{ boxShadow: "1px 0 1px 0 #292929, 0 2px 0 2px #101010, 0 2px 0 3px #444" }}>CTRL</kbd>
@@ -1559,7 +1616,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-y-2">
+                            {/* <div className="flex flex-col gap-y-2">
                                 <p className="text-sm uppercase font-bold text-zinc-300">Multiplayer</p>
                                 <button className="flex w-fit bg-green-700 rounded-full text-center contents-center justify-center items-center shadow-inner shadow-green-200/50 hover:shadow-green-300/30 cursor-pointer hover:bg-green-600 transition-all">
                                     <span className="px-6 py-2 text-green-200 text-sm hover:text-green-100">+ Create Room</span>
@@ -1570,7 +1627,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
                                         <span className="px-6 py-2 text-zinc-300 text-sm hover:text-zinc-100">Join</span>
                                     </button>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 </div>

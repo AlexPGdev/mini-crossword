@@ -7,7 +7,7 @@ interface PuzzleContextType {
     puzzles: any[]
     stats: any
     getPuzzleById: (id: string) => Promise<any>
-    saveProgress: (crosswordId: string, grid: (string | null )[][], timeSpent: number) => Promise<number>
+    saveProgress: (crosswordId: string, grid: (string | null )[][], timeSpent: number, checkGridCount: number, revealedLetterCount: number) => Promise<number>
 }
 
 const PuzzleContent = createContext<PuzzleContextType | undefined>(undefined)
@@ -100,13 +100,15 @@ export const PuzzlesProvider = ({ children }: { children: React.ReactNode }) => 
         return response.json()
     }, [])
 
-    const saveProgress = async (crosswordId: string, grid: (string | null)[][], timeSpent: number) => {
+    const saveProgress = async (crosswordId: string, grid: (string | null)[][], timeSpent: number, checkGridCount: number, revealedLetterCount: number) => {
         const response = await fetch("/api/progress", {
             method: "POST",
             body: JSON.stringify({
                 puzzleId: `bostonglobe-mini-${crosswordId}`,
                 filledGrid: grid,
-                timeSpent: timeSpent
+                timeSpent: timeSpent,
+                checkGridCount: checkGridCount,
+                revealedLetterCount: revealedLetterCount
             })
         });
 

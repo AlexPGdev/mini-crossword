@@ -5,7 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const { puzzleId, filledGrid, timeSpent } = await req.json();
+  const { puzzleId, filledGrid, timeSpent, checkGridCount, revealedLetterCount } = await req.json();
 
   const puzzle = await prisma.puzzle.findFirst({
     where: {
@@ -49,7 +49,10 @@ export async function POST(req: Request) {
       update: {
         filledGrid,
         timer: timeSpent,
-        isCompleted: isSolved
+        isCompleted: isSolved,
+        updatedAt: new Date(),
+        checkGridCount: checkGridCount || 0,
+        revealedLetterCount: revealedLetterCount || 0
       },
       create: {
         userId: user.id,
@@ -57,7 +60,9 @@ export async function POST(req: Request) {
         filledGrid,
         timer: timeSpent,
         isCompleted: isSolved,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        checkGridCount: checkGridCount || 0,
+        revealedLetterCount: checkGridCount || 0
       }
     });
   

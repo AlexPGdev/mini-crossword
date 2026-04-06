@@ -32,6 +32,8 @@ model Progress {
   timer       Int @default(0)
   isCompleted Boolean  @default(false)
   updatedAt   DateTime @updatedAt
+  checkGridCount Int @default(0)
+  revealedLetterCount Int @default(0)
 
   user   User   @relation(fields: [userId], references: [id])
   puzzle Puzzle @relation(fields: [puzzleId], references: [id])
