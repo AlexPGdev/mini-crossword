@@ -24,9 +24,6 @@ function HomeContent({ streaks }: HomeProps) {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-
-    console.log(streaks.length)
-
       fetch("/api/user")
         .then(res => res.json())
         .then(user => {

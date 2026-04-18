@@ -631,8 +631,6 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
         if (!userGrid || userGrid?.length === 1 || crosswordId === null) return;
 
-        console.log(checkGridCountRef.current)
-
         if(checkGridCountRef.current >= 3 && !checkSolved) return;
 
         const solution = solvedGridRef.current;
@@ -1074,6 +1072,9 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
     function changePuzzle(offset: number) {
         if (!crosswordId) return;
 
+        if(offset > 0 && nextCrossword === null) return;
+        if(offset <= 0 && previousCrossword === null) return;
+
         setDirection(offset);
 
         router.push(`/mini-crossword?crossword=${offset > 0 ? nextCrossword : previousCrossword}`, { scroll: false });
@@ -1356,13 +1357,13 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
                             <div className="flex justify-between items-center gap-x-2 border-b-1 border-zinc-600 pb-4 sm:pb-5 min-w-0">
                                 <div className="shrink-0">
-                                    <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all" title="Previous Crossword" onClick={() => changePuzzle(-1)}>
+                                    <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" title={`${!previousCrossword ? "No previous crossword available" : "Previous Crossword"}`} onClick={() => changePuzzle(-1)} disabled={!previousCrossword}>
                                         <MoveLeft className="size-[18px] sm:size-6" />
                                     </button>
                                 </div>
                                 <p className="text-sm sm:text-base px-2 min-w-0 truncate" title={formatedTitle}>{formatedTitle ? formatedTitle : <Skeleton width={100} height={20} baseColor="#27272a" highlightColor="#3c3e3e" borderRadius={"0.5rem"} />}</p>
                                 <div className="shrink-0">
-                                    <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all" title="Next Crossword" onClick={() => changePuzzle(1)}>
+                                    <button type="button" className="cursor-pointer bg-zinc-600/30 hover:bg-zinc-600 p-2 px-6 rounded-full shadow-inner shadow-zinc-200/30 hover:shadow-inner active:bg-zinc-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" title={`${!nextCrossword ? "No next crossword available" : "Next Crossword"}`} onClick={() => changePuzzle(1)} disabled={!nextCrossword}>
                                         <MoveRight className="size-[18px] sm:size-6" />
                                     </button>
                                 </div>
@@ -1529,7 +1530,7 @@ export function MiniCrossword({ onHomeClick, allPuzzleIds }: MiniCrosswordProps)
 
                                             <div className="flex items-center gap-4 w-72">
                                                 <span>{"->"}</span>
-                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => checkGrid}>
+                                                <button type="button" className="relative overflow-hidden flex bg-zinc-600/30 cursor-pointer hover:bg-zinc-600 active:bg-zinc-500 rounded-full shadow-inner shadow-zinc-200/30 transition-all shrink-0" onClick={() => checkGrid()}>
                                                     <span className="p-1.5 px-2 sm:p-2 sm:px-4 text-sm sm:text-sm relative z-10">Check Grid</span>
                                                     <AnimatePresence>
                                                         {(keyHeld.ctrl && keyHeld.c) && (
